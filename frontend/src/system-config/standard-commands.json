@@ -1,0 +1,29 @@
+{
+  "commands": [
+    {
+      "id": "server",
+      "name": "服务器组件",
+      "icon": "Monitor"
+    },
+    {
+      "id": "api",
+      "name": "API组件",
+      "icon": "Connection"
+    },
+    {
+      "id": "web",
+      "name": "Web组件",
+      "icon": "Link"
+    },
+    {
+      "id": "database",
+      "name": "数据库组件",
+      "icon": "Document"
+    },
+    {
+      "id": "other",
+      "name": "其它组件",
+      "icon": "Setting"
+    }
+  ]
+}
