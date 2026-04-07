@@ -12,13 +12,13 @@
       />
 
       <!-- 全局变量 -->
-      <GlobalVariables 
+      <!-- <GlobalVariables 
         :variables-height="variablesHeight"
         :global-variables="globalVariables"
         @add-variable="$emit('add-variable')"
         @edit-variable="$emit('edit-variable', $event)"
         :language="language"
-      />
+      /> -->
     </div>
   </aside>
 </template>

@@ -34,6 +34,7 @@
                   @dragleave="handleStepDragLeave(tab.id, index)"
                   @drop="handleStepDrop(tab.id, index)"
                   @dragend="handleStepDragEnd"
+                  @dblclick="handleStepDoubleClick(tab.id, step)"
                 >
                   <div class="step-number">{{ step.stepNumber }}</div>
                   <div class="step-content">
@@ -97,7 +98,7 @@ export default {
       default: 'English'
     }
   },
-  emits: ['add-tab-click', 'drop-command', 'drop-custom-command', 'drop-flow', 'load-global-variables', 'active-tab-change'],
+  emits: ['add-tab-click', 'drop-command', 'drop-custom-command', 'drop-flow', 'load-global-variables', 'active-tab-change', 'step-double-click'],
   data() {
     const savedTabs = localStorage.getItem('editorFlowTabs')
     const savedActiveTab = localStorage.getItem('editorActiveTabId')
@@ -602,6 +603,12 @@ export default {
       this.draggedIndex = null
       this.dragOverTabId = null
       this.dragOverIndex = null
+    },
+    handleStepDoubleClick(tabId, step) {
+      console.log('双击步骤卡片:', { tabId, step })
+      if (step.commandData) {
+        this.$emit('step-double-click', step)
+      }
     }
   }
 }
