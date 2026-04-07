@@ -1,0 +1,68 @@
+{
+  "name": "test",
+  "description": "test",
+  "nodes": [
+    {
+      "id": 1775575913918,
+      "name": "server",
+      "description": "server",
+      "data": {
+        "type": "server",
+        "name": "server",
+        "description": "server",
+        "host": "123",
+        "uploadFile": false,
+        "resultVariable": "res1",
+        "command": "123"
+      },
+      "stepNumber": 1
+    },
+    {
+      "id": 1775575927618,
+      "name": "api",
+      "description": "api",
+      "data": {
+        "type": "api",
+        "name": "api",
+        "description": "api",
+        "url": "123",
+        "method": "POST",
+        "headers": "",
+        "body": "",
+        "resultVariable": "res2"
+      },
+      "stepNumber": 2
+    },
+    {
+      "id": 1775575955814,
+      "name": "web",
+      "description": "web",
+      "data": {
+        "type": "web",
+        "name": "web",
+        "description": "web",
+        "action": "get-value",
+        "element": "res123",
+        "inputValue": "",
+        "resultVariable": "res3"
+      },
+      "stepNumber": 3
+    },
+    {
+      "id": 1775575969008,
+      "name": "sql",
+      "description": "sql",
+      "data": {
+        "type": "sql",
+        "name": "sql",
+        "description": "sql",
+        "url": "123",
+        "resultVariable": "res4",
+        "sql": "123"
+      },
+      "stepNumber": 4
+    }
+  ],
+  "edges": [],
+  "globalVariables": []
+}
