@@ -97,13 +97,13 @@ export default {
       default: 'English'
     }
   },
-  emits: ['add-tab-click', 'drop-command', 'drop-custom-command', 'drop-flow', 'load-global-variables'],
+  emits: ['add-tab-click', 'drop-command', 'drop-custom-command', 'drop-flow', 'load-global-variables', 'active-tab-change'],
   data() {
     const savedTabs = localStorage.getItem('editorFlowTabs')
     const savedActiveTab = localStorage.getItem('editorActiveTabId')
     
     let initialTabs = [
-      { id: 1, name: this.t('unsaved'), steps: [], folderName: null, flowName: null }
+      { id: 1, name: this.t('unsaved'), steps: [], folderName: null, flowName: null, hasJsonFile: false }
     ]
     let initialActiveTab = '1'
     
@@ -117,7 +117,8 @@ export default {
             steps: Array.isArray(tab.steps) ? tab.steps : [],
             folderName: tab.folderName || null,
             flowName: tab.flowName || null,
-            description: tab.description || ''
+            description: tab.description || '',
+            hasJsonFile: tab.hasJsonFile || !!(tab.folderName && tab.flowName)
           }))
         }
       } catch (e) {
@@ -194,6 +195,9 @@ export default {
       
       console.log('handleTabChange - 当前所有标签页:', this.flowTabs.map(t => ({ id: t.id, name: t.name, folderName: t.folderName, flowName: t.flowName })))
       console.log('handleTabChange - 找到的 tab:', tab)
+      
+      const tabName = tab ? (tab.flowName || tab.name) : ''
+      this.$emit('active-tab-change', tabName)
       
       if (tab && tab.folderName && tab.flowName) {
         try {
@@ -413,7 +417,8 @@ export default {
         steps: [],
         folderName: folderName || null,
         flowName: flowName || null,
-        description: description || ''
+        description: description || '',
+        hasJsonFile: !!(folderName && flowName)
       }
       this.flowTabs.push(newTab)
       this.activeFlowTabId = newId.toString()
@@ -459,7 +464,8 @@ export default {
             steps: steps,
             folderName: folderName,
             flowName: flowName,
-            description: result.data.description || ''
+            description: result.data.description || '',
+            hasJsonFile: true
           }
           
           console.log('创建新标签页:', newTab)
@@ -523,6 +529,7 @@ export default {
         tab.folderName = folderName
         tab.flowName = flowName
         tab.description = description
+        tab.hasJsonFile = !!(folderName && flowName)
         console.log('设置流程信息后的 tab:', tab)
         
         if (folderName && flowName) {

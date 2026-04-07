@@ -33,12 +33,13 @@
           @drop-custom-command="handleDropCustomCommand"
           @drop-flow="handleDropFlow"
           @load-global-variables="handleLoadGlobalVariables"
+          @active-tab-change="handleActiveTabChange"
         />
         
         <div class="bottom-panel-container">
           <div class="resizer resizer-top" 
                @mousedown="startResizing('bottom', $event, 'height')"></div>
-          <BottomPanel :height="bottomPanelHeight" :language="currentLanguage" />
+          <BottomPanel :height="bottomPanelHeight" :language="currentLanguage" :active-tab-name="currentActiveTabName" />
         </div>
       </div>
       
@@ -632,6 +633,10 @@ const messages = {
     runFailed: 'Run Failed',
     noActiveTab: 'No active tab',
     pleaseCheckServer: 'Please check if server is running',
+    confirmDownloadReport: 'Confirm download report?',
+    downloadReport: 'Download Report',
+    noReportFile: 'No report file found',
+    pleaseSaveFirst: 'Please save the flow first',
     loadFailed: 'Load Failed',
     saveFailed: 'Save Failed',
     renameSuccess: 'Rename Success',
@@ -710,7 +715,9 @@ const messages = {
     otherComponentUpdateSuccess: 'Other component updated successfully',
     otherComponentCreateSuccess: 'Other component created successfully',
     databaseComponentUpdateSuccess: 'Database component updated successfully',
-    databaseComponentCreateSuccess: 'Database component created successfully'
+    databaseComponentCreateSuccess: 'Database component created successfully',
+    downloadSuccess: 'Download success',
+    downloadFailed: 'Download failed'
   },
   '简体中文': {
     newGroup: '新建分组',
@@ -801,6 +808,10 @@ const messages = {
     runFailed: '运行失败',
     noActiveTab: '没有活跃的标签页',
     pleaseCheckServer: '请检查服务器是否运行',
+    confirmDownloadReport: '确认下载报告吗？',
+    downloadReport: '下载报告',
+    noReportFile: '未找到报告文件',
+    pleaseSaveFirst: '请先保存流程',
     loadFailed: '加载失败',
     saveFailed: '保存失败',
     renameSuccess: '重命名成功',
@@ -879,7 +890,9 @@ const messages = {
     otherComponentUpdateSuccess: '其它组件更新成功',
     otherComponentCreateSuccess: '其它组件创建成功',
     databaseComponentUpdateSuccess: '数据库组件更新成功',
-    databaseComponentCreateSuccess: '数据库组件创建成功'
+    databaseComponentCreateSuccess: '数据库组件创建成功',
+    downloadSuccess: '下载成功',
+    downloadFailed: '下载失败'
   }
 }
 
@@ -912,6 +925,7 @@ export default {
       rightPanelWidth: 280,
       bottomPanelHeight: 200,
       variablesSectionHeight: 300,
+      currentActiveTabName: '',
       isResizing: false,
       currentResizer: null,
       startX: 0,
@@ -1229,6 +1243,10 @@ export default {
       console.log('handleLanguageChange 被调用:', language)
       this.currentLanguage = language
       localStorage.setItem('currentLanguage', language)
+    },
+    handleActiveTabChange(tabName) {
+      console.log('handleActiveTabChange 被调用:', tabName)
+      this.currentActiveTabName = tabName
     },
     async confirmCreateFlow() {
       if (!this.$refs.createFlowForm) {
@@ -1571,6 +1589,11 @@ export default {
         return
       }
       
+      if (!activeTab.hasJsonFile) {
+        ElMessage.warning(this.t('pleaseSaveFirst'))
+        return
+      }
+      
       try {
         const flowData = {
           name: activeTab.flowName || activeTab.name,
@@ -1607,8 +1630,71 @@ export default {
       }
     },
     
-    handleExportReport() {
+    async handleExportReport() {
       console.log('导出报告')
+      
+      const activeTab = this.$refs.editorPanel?.getActiveTab()
+      if (!activeTab) {
+        ElMessage.error(this.t('noActiveTab'))
+        return
+      }
+      
+      if (!activeTab.hasJsonFile) {
+        ElMessage.warning(this.t('pleaseSaveFirst'))
+        return
+      }
+      
+      const tabName = activeTab.flowName || activeTab.name
+      
+      try {
+        ElMessageBox.confirm(
+          this.t('confirmDownloadReport'),
+          this.t('exportReport'),
+          {
+            confirmButtonText: this.t('confirm'),
+            cancelButtonText: this.t('cancel'),
+            type: 'info'
+          }
+        ).then(async () => {
+          try {
+            console.log('调用导出报告接口，标签页名称:', tabName)
+            const response = await fetch(`${apiConfig.apiBaseUrl}${apiConfig.endpoints.getReport}?tabName=${encodeURIComponent(tabName)}`, {
+              method: 'GET'
+            })
+            
+            if (response.ok) {
+              const blob = await response.blob()
+              const contentDisposition = response.headers.get('Content-Disposition')
+              let fileName = `${tabName}_report.xlsx`
+              
+              if (contentDisposition) {
+                const fileNameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+                if (fileNameMatch && fileNameMatch[1]) {
+                  fileName = fileNameMatch[1].replace(/['"]/g, '')
+                }
+              }
+              
+              const url = window.URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = fileName
+              document.body.appendChild(a)
+              a.click()
+              document.body.removeChild(a)
+              window.URL.revokeObjectURL(url)
+              
+              ElMessage.success(this.t('downloadSuccess'))
+            } else {
+              ElMessage.error(this.t('downloadFailed'))
+            }
+          } catch (error) {
+            console.error('导出报告失败:', error)
+            ElMessage.error(this.t('downloadFailed'))
+          }
+        }).catch(() => {
+        })
+      } catch (error) {
+      }
     },
     
     handleCommandClick(command) {

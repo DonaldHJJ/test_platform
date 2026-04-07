@@ -4,17 +4,9 @@
       <el-tab-pane :label="t('logs')" name="logs">
         <div class="bottom-tab-content logs-content">
           <el-table :data="logsData" style="width: 100%; height: 100%" stripe border fit>
-            <el-table-column prop="time" :label="t('time')" width="180"></el-table-column>
-            <el-table-column prop="log" :label="t('componentId')" width="200"></el-table-column>
-            <el-table-column prop="level" :label="t('logInfo')"></el-table-column>
-          </el-table>
-        </div>
-      </el-tab-pane>
-      <el-tab-pane :label="t('errors')" name="errors">
-        <div class="bottom-tab-content errors-content">
-          <el-table :data="errorsData" style="width: 100%; height: 100%" stripe border fit>
-            <el-table-column prop="time" :label="t('time')" width="180"></el-table-column>
-            <el-table-column prop="message" :label="t('errorInfo')"></el-table-column>
+            <el-table-column prop="timestamp" :label="t('time')" width="180"></el-table-column>
+            <el-table-column prop="componentId" :label="t('componentId')" width="200"></el-table-column>
+            <el-table-column prop="message" :label="t('logInfo')"></el-table-column>
           </el-table>
         </div>
       </el-tab-pane>
@@ -23,6 +15,8 @@
 </template>
 
 <script>
+import apiConfig from '../config/api.js'
+
 const messages = {
   'English': {
     logs: 'Logs',
@@ -52,13 +46,17 @@ export default {
     language: {
       type: String,
       default: 'English'
+    },
+    activeTabName: {
+      type: String,
+      default: ''
     }
   },
   data() {
     return {
       activeBottomTab: 'logs',
       errorsData: Array(5).fill({ time: '', message: '' }),
-      logsData: Array(5).fill({ time: '', log: '', level: '' }),
+      logsData: Array(5).fill({ timestamp: '', componentId: '', message: '' }),
       adjustTimer: null
     }
   },
@@ -66,6 +64,9 @@ export default {
     this.$nextTick(() => {
       this.adjustTableRows(this.height)
     })
+    if (this.activeTabName) {
+      this.loadLogsData()
+    }
   },
   beforeDestroy() {
     if (this.adjustTimer) {
@@ -88,13 +89,50 @@ export default {
         }, 100)
       },
       deep: false
+    },
+    activeTabName: {
+      handler(newName) {
+        if (newName) {
+          this.loadLogsData()
+        }
+      },
+      immediate: false
     }
   },
   methods: {
     t(key) {
       return messages[this.language]?.[key] || messages['English'][key]
     },
-    adjustTableRows(height) {
+    async loadLogsData() {
+      if (!this.activeTabName) {
+        console.log('没有活跃的标签页名称，重置到初始状态')
+        this.adjustTableRows(this.height, true)
+        return
+      }
+      
+      try {
+        console.log('加载日志数据，标签页名称:', this.activeTabName)
+        const fileName = `${this.activeTabName}_logs.json`
+        const response = await fetch(`${apiConfig.publicPath}result/log/${fileName}`)
+        
+        if (response.ok) {
+          const data = await response.json()
+          console.log('加载到的日志数据:', data)
+          if (Array.isArray(data)) {
+            this.logsData = data
+          } else if (data.logs && Array.isArray(data.logs)) {
+            this.logsData = data.logs
+          }
+        } else {
+          console.log('日志文件不存在或加载失败，重置到初始状态:', fileName)
+          this.adjustTableRows(this.height, true)
+        }
+      } catch (error) {
+        console.error('加载日志数据失败，重置到初始状态:', error)
+        this.adjustTableRows(this.height, true)
+      }
+    },
+    adjustTableRows(height, resetLogs = false) {
       try {
         if (!height || height <= 0) {
           console.warn('Invalid height provided:', height)
@@ -106,14 +144,18 @@ export default {
         const availableHeight = Math.max(60, height - padding * 2)
         const rowCount = Math.max(1, Math.floor(availableHeight / rowHeight))
         
-        console.log('Adjusting table rows, rowCount:', rowCount)
+        console.log('Adjusting table rows, rowCount:', rowCount, 'resetLogs:', resetLogs)
         
         this.errorsData = Array(rowCount).fill({ time: '', message: '' })
-        this.logsData = Array(rowCount).fill({ time: '', log: '', level: '' })
+        if (resetLogs || !this.logsData || this.logsData.length === 0) {
+          this.logsData = Array(rowCount).fill({ timestamp: '', componentId: '', message: '' })
+        }
       } catch (error) {
         console.error('Error adjusting table rows:', error)
         this.errorsData = Array(5).fill({ time: '', message: '' })
-        this.logsData = Array(5).fill({ time: '', log: '', level: '' })
+        if (resetLogs || !this.logsData || this.logsData.length === 0) {
+          this.logsData = Array(5).fill({ timestamp: '', componentId: '', message: '' })
+        }
       }
     }
   }
