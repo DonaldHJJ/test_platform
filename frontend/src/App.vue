@@ -34,6 +34,7 @@
           @drop-flow="handleDropFlow"
           @load-global-variables="handleLoadGlobalVariables"
           @active-tab-change="handleActiveTabChange"
+          @step-double-click="handleStepDoubleClick"
         />
         
         <div class="bottom-panel-container">
@@ -259,6 +260,7 @@
         </el-form-item>
         <el-form-item :label="t('action')" prop="action">
           <el-select v-model="webCommandForm.action" :placeholder="t('pleaseEnterAction')">
+            <el-option :label="t('openLink')" value="open-link"></el-option>
             <el-option :label="t('click')" value="click"></el-option>
             <el-option :label="t('doubleClick')" value="double-click"></el-option>
             <el-option :label="t('rightClick')" value="right-click"></el-option>
@@ -266,11 +268,11 @@
             <el-option :label="t('getValue')" value="get-value"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item v-if="['click', 'double-click', 'right-click', 'input', 'get-value'].includes(webCommandForm.action)" :label="t('name')" prop="element">
+        <el-form-item v-if="['click', 'double-click', 'right-click', 'input', 'get-value', 'open-link'].includes(webCommandForm.action)" :label="t('name')" prop="element">
           <el-input v-model="webCommandForm.element" :placeholder="t('pleaseEnterElementSelector')"></el-input>
         </el-form-item>
-        <el-form-item v-if="webCommandForm.action === 'input'" :label="t('value')">
-          <el-input v-model="webCommandForm.inputValue" :placeholder="t('pleaseEnterValue')"></el-input>
+        <el-form-item v-if="['input', 'open-link'].includes(webCommandForm.action)" :label="t('value')" prop="inputValue">
+          <el-input v-model="webCommandForm.inputValue" :placeholder="webCommandForm.action === 'open-link' ? t('pleaseEnterUrl') : t('pleaseEnterValue')"></el-input>
         </el-form-item>
         <el-form-item v-if="webCommandForm.action === 'get-value'" :label="t('resultVariable')">
           <el-input v-model="webCommandForm.resultVariable" :placeholder="t('pleaseEnterResultVariable')"></el-input>
@@ -302,13 +304,11 @@
             <el-option :label="t('compareFile')" value="compareFile"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item v-if="otherCommandForm.subType === 'compareValue' || otherCommandForm.subType === 'compareFile'" :label="t('element')" prop="resultVariable">
-          <el-select v-model="otherCommandForm.resultVariable" :placeholder="t('pleaseSelectElement')" clearable>
-            <el-option label="var1" value="var1"></el-option>
-            <el-option label="var2" value="var2"></el-option>
-            <el-option label="var3" value="var3"></el-option>
-            <el-option label="result" value="result"></el-option>
-            <el-option label="data" value="data"></el-option>
+        <el-form-item v-if="otherCommandForm.subType === 'compareValue' || otherCommandForm.subType === 'compareFile'" :label="t('variable')" prop="resultVariable">
+          <el-select v-model="otherCommandForm.resultVariable" :placeholder="t('pleaseSelectVariable')" clearable>
+            <template v-if="isFromDrag || editingStepId">
+              <el-option v-for="variable in allResultVariables" :key="variable" :label="variable" :value="variable"></el-option>
+            </template>
           </el-select>
         </el-form-item>
         <el-form-item v-if="otherCommandForm.subType === 'compareValue'" :label="t('relation')" prop="relation">
@@ -574,12 +574,13 @@ const messages = {
     pleaseEnterResultVariable: 'Please enter variable',
     pleaseEnterWebComponentName: 'Please enter web component name',
     pleaseEnterAction: 'Please select action',
+    openLink: 'Open Link',
     click: 'Click',
     doubleClick: 'Double Click',
     rightClick: 'Right Click',
     input: 'Input',
     getValue: 'Get Value',
-    pleaseEnterElementSelector: 'Please enter element selector',
+    pleaseEnterElementSelector: 'Please enter element',
     pleaseEnterValue: 'Please enter value',
     pleaseEnterOtherComponentName: 'Please enter other component name',
     pleaseEnterSubType: 'Please select type',
@@ -587,7 +588,9 @@ const messages = {
     compareValue: 'Compare Value',
     compareFile: 'Compare File',
     element: 'Element',
+    variable: 'Variable',
     relation: 'Relation',
+    pleaseSelectVariable: 'Please select variable',  
     pleaseSelectElement: 'Please select element',
     pleaseSelectRelation: 'Please select relation',
     isNull: 'Is Null',
@@ -702,6 +705,8 @@ const messages = {
     groupDeleteFailed: 'Failed to delete group',
     saveFlowFailed: 'Failed to save flow, please check if server is running',
     confirmDeleteGroup: 'Are you sure you want to delete the group "{groupName}"? This action cannot be undone.',
+    confirmDeleteComponent: 'Are you sure you want to delete this component?',
+    confirmDelete: 'Confirm Delete',
     pleaseEnterSQL: 'Please enter SQL statement',
     pleaseUploadFile: 'Please upload file',
     pleaseUploadSQLFile: 'Please upload SQL file',
@@ -717,7 +722,8 @@ const messages = {
     databaseComponentUpdateSuccess: 'Database component updated successfully',
     databaseComponentCreateSuccess: 'Database component created successfully',
     downloadSuccess: 'Download success',
-    downloadFailed: 'Download failed'
+    downloadFailed: 'Download failed',
+    updateSuccess: 'Update success'
   },
   '简体中文': {
     newGroup: '新建分组',
@@ -749,12 +755,13 @@ const messages = {
     pleaseEnterResultVariable: '请输入结果变量',
     pleaseEnterWebComponentName: '请输入Web组件名称',
     pleaseEnterAction: '请选择操作',
+    openLink: '打开链接',
     click: '单击',
     doubleClick: '双击',
     rightClick: '右击',
     input: '输入',
     getValue: '获取值',
-    pleaseEnterElementSelector: '请输入元素选择器',
+    pleaseEnterElementSelector: '请输入元素',
     pleaseEnterValue: '请输入值',
     pleaseEnterOtherComponentName: '请输入其它组件名称',
     pleaseEnterSubType: '请选择类型',
@@ -762,9 +769,11 @@ const messages = {
     compareValue: '对比值',
     compareFile: '对比文件',
     element: '元素',
+    variable: '变量',
     relation: '关系',
     pleaseSelectElement: '请选择元素',
     pleaseSelectRelation: '请选择关系',
+    pleaseSelectVariable: '请选择变量',  
     isNull: '为空',
     isNotNull: '不为空',
     lessThan: '小于',
@@ -877,6 +886,8 @@ const messages = {
     groupDeleteFailed: '删除分组失败，请检查服务器是否运行',
     saveFlowFailed: '保存失败，请检查服务器是否运行',
     confirmDeleteGroup: '确定要删除分组"{groupName}"吗？此操作不可恢复。',
+    confirmDeleteComponent: '确定要删除该组件吗？',
+    confirmDelete: '确认删除',
     pleaseEnterSQL: '请输入SQL语句',
     pleaseUploadFile: '请上传文件',
     pleaseUploadSQLFile: '请上传SQL文件',
@@ -892,7 +903,8 @@ const messages = {
     databaseComponentUpdateSuccess: '数据库组件更新成功',
     databaseComponentCreateSuccess: '数据库组件创建成功',
     downloadSuccess: '下载成功',
-    downloadFailed: '下载失败'
+    downloadFailed: '下载失败',
+    updateSuccess: '更新成功'
   }
 }
 
@@ -957,6 +969,7 @@ export default {
       // 新建服务器指令相关
       serverCommandDialogVisible: false,
       isEditingCommand: false,
+      editingStepId: null,
       uploadedFileList: [],
       serverCommandForm: {
         name: '',
@@ -1043,20 +1056,58 @@ export default {
     }
   },
   computed: {
+    allResultVariables() {
+      const variables = []
+      const groups = this.$refs?.leftPanel?.customGroups || []
+      
+      groups.forEach(group => {
+        if (group.commands) {
+          group.commands.forEach(command => {
+            if (command.resultVariable && command.resultVariable.trim()) {
+              if (!variables.includes(command.resultVariable)) {
+                variables.push(command.resultVariable)
+              }
+            }
+          })
+        }
+      })
+      
+      const activeTab = this.$refs?.editorPanel?.getActiveTab?.()
+      if (activeTab && activeTab.steps) {
+        activeTab.steps.forEach(step => {
+          const resultVariable = step.commandData?.resultVariable
+          if (resultVariable && resultVariable.trim()) {
+            if (!variables.includes(resultVariable)) {
+              variables.push(resultVariable)
+            }
+          }
+        })
+      }
+      
+      return variables
+    },
     serverCommandRules() {
+      const isRequired = this.isFromDrag || this.editingStepId
       const rules = {
-        name: [{ required: true, message: this.t('pleaseEnterComponentName'), trigger: 'blur' }],
-        description: [{ required: true, message: this.t('pleaseEnterDescription'), trigger: 'blur' }],
-        host: [{ required: true, message: this.t('pleaseEnterHost'), trigger: 'blur' }]
+        name: [{ required: true, message: this.t('pleaseEnterComponentName'), trigger: 'blur' }]
+      }
+      
+      if (isRequired) {
+        rules.description = [{ required: true, message: this.t('pleaseEnterDescription'), trigger: 'blur' }]
+        rules.host = [{ required: true, message: this.t('pleaseEnterHost'), trigger: 'blur' }]
       }
       
       if (!this.serverCommandForm.uploadFile) {
-        rules.command = [{ required: true, message: this.t('pleaseEnterComponent'), trigger: 'blur' }]
+        if (isRequired) {
+          rules.command = [{ required: true, message: this.t('pleaseEnterComponent'), trigger: 'blur' }]
+        }
       } else {
-        rules.path = [{ required: true, message: this.t('pleaseEnterPath'), trigger: 'blur' }]
+        if (isRequired) {
+          rules.path = [{ required: true, message: this.t('pleaseEnterPath'), trigger: 'blur' }]
+        }
         rules.serverFile = [{ 
           validator: (rule, value, callback) => {
-            if (!this.serverCommandForm.storedFilename) {
+            if (isRequired && !this.serverCommandForm.storedFilename) {
               callback(new Error(this.t('pleaseUploadFile')))
             } else {
               callback()
@@ -1069,49 +1120,72 @@ export default {
       return rules
     },
     apiCommandRules() {
-      return {
-        name: [{ required: true, message: this.t('pleaseEnterComponentName'), trigger: 'blur' }],
-        description: [{ required: true, message: this.t('pleaseEnterDescription'), trigger: 'blur' }],
-        url: [{ required: true, message: this.t('pleaseEnterUrl'), trigger: 'blur' }],
-        method: [{ required: true, message: this.t('pleaseSelectRequestMethod'), trigger: 'change' }]
-      }
-    },
-    webCommandRules() {
-      return {
-        name: [{ required: true, message: this.t('pleaseEnterComponentName'), trigger: 'blur' }],
-        description: [{ required: true, message: this.t('pleaseEnterDescription'), trigger: 'blur' }],
-        action: [{ required: true, message: this.t('pleaseEnterAction'), trigger: 'change' }],
-        element: [{ required: true, message: this.t('pleaseEnterElement'), trigger: 'blur' }]
-      }
-    },
-    otherCommandRules() {
+      const isRequired = this.isFromDrag || this.editingStepId
       const rules = {
-        name: [{ required: true, message: this.t('pleaseEnterComponentName'), trigger: 'blur' }],
-        description: [{ required: true, message: this.t('pleaseEnterDescription'), trigger: 'blur' }],
-        subType: [{ required: true, message: this.t('pleaseEnterSubType'), trigger: 'change' }]
+        name: [{ required: true, message: this.t('pleaseEnterComponentName'), trigger: 'blur' }]
       }
       
-      if (this.otherCommandForm.subType === 'wait') {
+      if (isRequired) {
+        rules.description = [{ required: true, message: this.t('pleaseEnterDescription'), trigger: 'blur' }]
+        rules.url = [{ required: true, message: this.t('pleaseEnterUrl'), trigger: 'blur' }]
+        rules.method = [{ required: true, message: this.t('pleaseSelectRequestMethod'), trigger: 'change' }]
+      }
+      
+      return rules
+    },
+    webCommandRules() {
+      const isRequired = this.isFromDrag || this.editingStepId
+      const rules = {
+        name: [{ required: true, message: this.t('pleaseEnterComponentName'), trigger: 'blur' }]
+      }
+      
+      if (isRequired) {
+        rules.description = [{ required: true, message: this.t('pleaseEnterDescription'), trigger: 'blur' }]
+        rules.action = [{ required: true, message: this.t('pleaseEnterAction'), trigger: 'change' }]
+      }
+      
+      if (['click', 'double-click', 'right-click', 'input', 'get-value', 'open-link'].includes(this.webCommandForm.action) && isRequired) {
+        rules.element = [{ required: true, message: this.t('pleaseEnterElement'), trigger: 'blur' }]
+      }
+      
+      if (['input', 'open-link'].includes(this.webCommandForm.action) && isRequired) {
+        rules.inputValue = [{ required: true, message: this.webCommandForm.action === 'open-link' ? this.t('pleaseEnterUrl') : this.t('pleaseEnterValue'), trigger: 'blur' }]
+      }
+      
+      return rules
+    },
+    otherCommandRules() {
+      const isRequired = this.isFromDrag || this.editingStepId
+      const rules = {
+        name: [{ required: true, message: this.t('pleaseEnterComponentName'), trigger: 'blur' }]
+      }
+      
+      if (isRequired) {
+        rules.description = [{ required: true, message: this.t('pleaseEnterDescription'), trigger: 'blur' }]
+        rules.subType = [{ required: true, message: this.t('pleaseEnterSubType'), trigger: 'change' }]
+      }
+      
+      if (this.otherCommandForm.subType === 'wait' && isRequired) {
         rules.waitTime = [{ required: true, message: this.t('pleaseEnterWaitTime'), trigger: 'blur' }]
         rules.waitUnit = [{ required: true, message: this.t('pleaseSelectType'), trigger: 'change' }]
       }
       
-      if (this.otherCommandForm.subType === 'compareValue' || this.otherCommandForm.subType === 'compareFile') {
-        rules.resultVariable = [{ required: true, message: this.t('pleaseSelectElement'), trigger: 'change' }]
+      if ((this.otherCommandForm.subType === 'compareValue' || this.otherCommandForm.subType === 'compareFile') && isRequired) {
+        rules.resultVariable = [{ required: true, message: this.t('pleaseSelectVariable'), trigger: 'change' }]
       }
       
-      if (this.otherCommandForm.subType === 'compareValue') {
+      if (this.otherCommandForm.subType === 'compareValue' && isRequired) {
         rules.relation = [{ required: true, message: this.t('pleaseSelectRelation'), trigger: 'change' }]
       }
       
-      if (this.otherCommandForm.subType === 'compareValue' && this.otherCommandForm.relation !== 'isNull' && this.otherCommandForm.relation !== 'isNotNull') {
+      if (this.otherCommandForm.subType === 'compareValue' && this.otherCommandForm.relation !== 'isNull' && this.otherCommandForm.relation !== 'isNotNull' && isRequired) {
         rules.compareValue = [{ required: true, message: this.t('pleaseEnterCompareValue'), trigger: 'blur' }]
       }
       
       if (this.otherCommandForm.subType === 'compareFile') {
         rules.compareFile = [{ 
           validator: (rule, value, callback) => {
-            if (!this.otherCommandForm.storedFilename) {
+            if (isRequired && !this.otherCommandForm.storedFilename) {
               callback(new Error(this.t('pleaseUploadCompareFile')))
             } else {
               callback()
@@ -1124,19 +1198,23 @@ export default {
       return rules
     },
     databaseCommandRules() {
+      const isRequired = this.isFromDrag || this.editingStepId
       const rules = {
-        name: [{ required: true, message: this.t('pleaseEnterComponentName'), trigger: 'blur' }],
-        description: [{ required: true, message: this.t('pleaseEnterDescription'), trigger: 'blur' }],
-        url: [{ required: true, message: this.t('pleaseEnterUrl'), trigger: 'blur' }],
-        type: [{ required: true, message: this.t('pleaseEnterSubType'), trigger: 'change' }]
+        name: [{ required: true, message: this.t('pleaseEnterComponentName'), trigger: 'blur' }]
       }
       
-      if (this.databaseCommandForm.type === 'sql') {
+      if (isRequired) {
+        rules.description = [{ required: true, message: this.t('pleaseEnterDescription'), trigger: 'blur' }]
+        rules.url = [{ required: true, message: this.t('pleaseEnterUrl'), trigger: 'blur' }]
+        rules.type = [{ required: true, message: this.t('pleaseEnterSubType'), trigger: 'change' }]
+      }
+      
+      if (this.databaseCommandForm.type === 'sql' && isRequired) {
         rules.sql = [{ required: true, message: this.t('pleaseEnterSQL'), trigger: 'blur' }]
       } else {
         rules.sqlFile = [{ 
           validator: (rule, value, callback) => {
-            if (!this.databaseCommandForm.storedFilename) {
+            if (isRequired && !this.databaseCommandForm.storedFilename) {
               callback(new Error(this.t('pleaseUploadSQLFile')))
             } else {
               callback()
@@ -1303,6 +1381,7 @@ export default {
       
       this.isFromDrag = true
       this.isEditingCommand = false
+      this.editingStepId = null
       
       switch (commandType) {
         case 'server':
@@ -1338,6 +1417,7 @@ export default {
       
       this.isFromDrag = true
       this.isEditingCommand = false
+      this.editingStepId = null
       
       if (command.type === 'api') {
         this.apiCommandForm = {
@@ -1966,11 +2046,123 @@ export default {
       this.contextMenuVisible = false
       this.isEditingCommand = false
       this.isFromDrag = false
+      this.editingStepId = null
       this.resetServerCommandForm()
       this.serverCommandDialogVisible = true
       this.$nextTick(() => {
         this.handleUploadFileChange()
       })
+    },
+    handleStepDoubleClick(step) {
+      console.log('双击编辑区卡片:', step)
+      const commandData = step.commandData
+      if (!commandData) {
+        return
+      }
+      
+      this.isEditingCommand = true
+      this.isFromDrag = false
+      this.editingStepId = step.id
+      
+      if (commandData.type === 'api') {
+        this.apiCommandForm = {
+          name: commandData.name || '',
+          description: commandData.description || '',
+          url: commandData.url || '',
+          method: commandData.method || 'GET',
+          headers: commandData.headers || '',
+          body: commandData.body || '',
+          resultVariable: commandData.resultVariable || ''
+        }
+        this.apiCommandDialogVisible = true
+      } else if (commandData.type === 'web') {
+        this.webCommandForm = {
+          name: commandData.name || '',
+          description: commandData.description || '',
+          action: commandData.action || '',
+          element: commandData.element || '',
+          inputValue: commandData.inputValue || '',
+          resultVariable: commandData.resultVariable || ''
+        }
+        this.webCommandDialogVisible = true
+      } else if (commandData.type === 'other') {
+        this.otherCommandForm = {
+          name: commandData.name || '',
+          description: commandData.description || '',
+          subType: commandData.subType || '',
+          waitTime: commandData.waitTime || '',
+          waitUnit: commandData.waitUnit || '',
+          compareValue: commandData.compareValue || '',
+          fileName: commandData.fileName || '',
+          storedFilename: commandData.storedFilename || '',
+          absolutePath: commandData.absolutePath || '',
+          resultVariable: commandData.resultVariable || '',
+          relation: commandData.relation || '',
+          ignoreFields: commandData.ignoreFields || '',
+          replaceList: commandData.replaceList || []
+        }
+        if (this.otherCommandForm.subType === 'compareFile' && this.otherCommandForm.storedFilename) {
+          this.otherUploadedFileList = [{
+            name: this.otherCommandForm.fileName,
+            url: `/uploadFiles/${this.otherCommandForm.storedFilename}`
+          }]
+        } else {
+          this.otherUploadedFileList = []
+        }
+        this.otherCommandDialogVisible = true
+        this.$nextTick(() => {
+          this.handleOtherTypeChange()
+        })
+      } else if (commandData.type === 'database') {
+        this.databaseCommandForm = {
+          name: commandData.name || '',
+          description: commandData.description || '',
+          url: commandData.url || '',
+          type: commandData.type || 'sql',
+          sql: commandData.sql || '',
+          fileName: commandData.fileName || '',
+          storedFilename: commandData.storedFilename || '',
+          absolutePath: commandData.absolutePath || '',
+          resultVariable: commandData.resultVariable || ''
+        }
+        if (this.databaseCommandForm.type === 'file' && this.databaseCommandForm.storedFilename) {
+          this.databaseUploadedFileList = [{
+            name: this.databaseCommandForm.fileName,
+            url: `/uploadFiles/${this.databaseCommandForm.storedFilename}`
+          }]
+        } else {
+          this.databaseUploadedFileList = []
+        }
+        this.databaseCommandDialogVisible = true
+        this.$nextTick(() => {
+          this.handleDatabaseTypeChange()
+        })
+      } else {
+        this.serverCommandForm = {
+          name: commandData.name || '',
+          description: commandData.description || '',
+          host: commandData.host || '',
+          uploadFile: commandData.uploadFile || false,
+          command: commandData.command || '',
+          path: commandData.path || '',
+          fileName: commandData.fileName || '',
+          storedFilename: commandData.storedFilename || '',
+          absolutePath: commandData.absolutePath || '',
+          resultVariable: commandData.resultVariable || ''
+        }
+        if (this.serverCommandForm.uploadFile && this.serverCommandForm.storedFilename) {
+          this.uploadedFileList = [{
+            name: this.serverCommandForm.fileName,
+            url: `/uploadFiles/${this.serverCommandForm.storedFilename}`
+          }]
+        } else {
+          this.uploadedFileList = []
+        }
+        this.serverCommandDialogVisible = true
+        this.$nextTick(() => {
+          this.handleUploadFileChange()
+        })
+      }
     },
     handleEditCommand(data) {
       console.log('双击编辑组件', data)
@@ -1982,6 +2174,8 @@ export default {
       console.log('编辑组件')
       this.contextMenuVisible = false
       this.isFromDrag = false
+      this.editingStepId = null
+      this.isEditingCommand = false
       
       const group = this.$refs.leftPanel.customGroups[this.currentGroupIndex]
       if (!group || !group.commands[this.currentCommandIndex]) {
@@ -2097,9 +2291,9 @@ export default {
       this.contextMenuVisible = false
       
       try {
-        await ElMessageBox.confirm('确定要删除该组件吗？', '确认删除', {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
+        await ElMessageBox.confirm(this.t('confirmDeleteComponent'), this.t('confirmDelete'), {
+          confirmButtonText: this.t('confirm'),
+          cancelButtonText: this.t('cancel'),
           type: 'warning'
         })
         
@@ -2294,17 +2488,18 @@ export default {
       this.$refs.serverCommandForm.validate(async (valid) => {
         if (valid) {
           try {
-            if (!this.isFromDrag && (this.currentGroupIndex === null || !this.$refs.leftPanel.customGroups[this.currentGroupIndex])) {
+            if (!this.isFromDrag && !this.editingStepId && (this.currentGroupIndex === null || !this.$refs.leftPanel.customGroups[this.currentGroupIndex])) {
               ElMessage.error(this.t('pleaseSelectGroup'))
               return
             }
             
             let groupName = null
-            if (!this.isFromDrag) {
+            if (!this.isFromDrag && !this.editingStepId) {
               groupName = this.$refs.leftPanel.customGroups[this.currentGroupIndex].name
             }
             
             const commandData = {
+              type: 'server',
               name: this.serverCommandForm.name,
               description: this.serverCommandForm.description,
               host: this.serverCommandForm.host,
@@ -2319,6 +2514,26 @@ export default {
               commandData.fileName = this.serverCommandForm.fileName
               commandData.storedFilename = this.serverCommandForm.storedFilename
               commandData.absolutePath = this.serverCommandForm.absolutePath
+            }
+            
+            if (this.editingStepId) {
+              const activeTab = this.$refs.editorPanel?.getActiveTab()
+              if (activeTab) {
+                const step = activeTab.steps.find(s => s.id === this.editingStepId)
+                if (step) {
+                  step.name = this.serverCommandForm.name
+                  step.description = this.serverCommandForm.description
+                  step.commandData = commandData
+                  if (activeTab.folderName && activeTab.flowName) {
+                    this.$refs.editorPanel.saveFlowToFile(activeTab)
+                  }
+                  ElMessage.success(this.t('updateSuccess'))
+                }
+              }
+              this.serverCommandDialogVisible = false
+              this.editingStepId = null
+              this.isEditingCommand = false
+              return
             }
             
             if (this.isFromDrag) {
@@ -2381,6 +2596,7 @@ export default {
       this.contextMenuVisible = false
       this.isEditingCommand = false
       this.isFromDrag = false
+      this.editingStepId = null
       this.apiCommandDialogVisible = true
       this.resetAPICommandForm()
     },
@@ -2400,13 +2616,13 @@ export default {
         this.$refs.apiCommandForm.validate(async (valid) => {
           if (valid) {
             try {
-              if (!this.isFromDrag && (this.currentGroupIndex === null || !this.$refs.leftPanel.customGroups[this.currentGroupIndex])) {
+              if (!this.isFromDrag && !this.editingStepId && (this.currentGroupIndex === null || !this.$refs.leftPanel.customGroups[this.currentGroupIndex])) {
                 ElMessage.error(this.t('pleaseSelectGroup'))
                 return
               }
               
               let groupName = null
-              if (!this.isFromDrag) {
+              if (!this.isFromDrag && !this.editingStepId) {
                 groupName = this.$refs.leftPanel.customGroups[this.currentGroupIndex].name
               }
               
@@ -2419,6 +2635,26 @@ export default {
                 headers: this.apiCommandForm.headers,
                 body: this.apiCommandForm.body,
                 resultVariable: this.apiCommandForm.resultVariable
+              }
+              
+              if (this.editingStepId) {
+                const activeTab = this.$refs.editorPanel?.getActiveTab()
+                if (activeTab) {
+                  const step = activeTab.steps.find(s => s.id === this.editingStepId)
+                  if (step) {
+                    step.name = this.apiCommandForm.name
+                    step.description = this.apiCommandForm.description
+                    step.commandData = commandData
+                    if (activeTab.folderName && activeTab.flowName) {
+                      this.$refs.editorPanel.saveFlowToFile(activeTab)
+                    }
+                    ElMessage.success(this.t('updateSuccess'))
+                  }
+                }
+                this.apiCommandDialogVisible = false
+                this.editingStepId = null
+                this.isEditingCommand = false
+                return
               }
               
               if (this.isFromDrag) {
@@ -2482,6 +2718,7 @@ export default {
       this.contextMenuVisible = false
       this.isEditingCommand = false
       this.isFromDrag = false
+      this.editingStepId = null
       this.webCommandDialogVisible = true
       this.resetWebCommandForm()
     },
@@ -2500,13 +2737,13 @@ export default {
         this.$refs.webCommandForm.validate(async (valid) => {
           if (valid) {
             try {
-              if (!this.isFromDrag && (this.currentGroupIndex === null || !this.$refs.leftPanel.customGroups[this.currentGroupIndex])) {
+              if (!this.isFromDrag && !this.editingStepId && (this.currentGroupIndex === null || !this.$refs.leftPanel.customGroups[this.currentGroupIndex])) {
                 ElMessage.error(this.t('pleaseSelectGroup'))
                 return
               }
               
               let groupName = null
-              if (!this.isFromDrag) {
+              if (!this.isFromDrag && !this.editingStepId) {
                 groupName = this.$refs.leftPanel.customGroups[this.currentGroupIndex].name
               }
               
@@ -2518,6 +2755,26 @@ export default {
                 element: this.webCommandForm.element,
                 inputValue: this.webCommandForm.inputValue,
                 resultVariable: this.webCommandForm.resultVariable
+              }
+              
+              if (this.editingStepId) {
+                const activeTab = this.$refs.editorPanel?.getActiveTab()
+                if (activeTab) {
+                  const step = activeTab.steps.find(s => s.id === this.editingStepId)
+                  if (step) {
+                    step.name = this.webCommandForm.name
+                    step.description = this.webCommandForm.description
+                    step.commandData = commandData
+                    if (activeTab.folderName && activeTab.flowName) {
+                      this.$refs.editorPanel.saveFlowToFile(activeTab)
+                    }
+                    ElMessage.success(this.t('updateSuccess'))
+                  }
+                }
+                this.webCommandDialogVisible = false
+                this.editingStepId = null
+                this.isEditingCommand = false
+                return
               }
               
               if (this.isFromDrag) {
@@ -2581,6 +2838,7 @@ export default {
       this.contextMenuVisible = false
       this.isEditingCommand = false
       this.isFromDrag = false
+      this.editingStepId = null
       this.resetOtherCommandForm()
       this.otherCommandDialogVisible = true
       this.$nextTick(() => {
@@ -2614,17 +2872,18 @@ export default {
       this.$refs.otherCommandForm.validate(async (valid) => {
         if (valid) {
           try {
-            if (!this.isFromDrag && (this.currentGroupIndex === null || !this.$refs.leftPanel.customGroups[this.currentGroupIndex])) {
+            if (!this.isFromDrag && !this.editingStepId && (this.currentGroupIndex === null || !this.$refs.leftPanel.customGroups[this.currentGroupIndex])) {
               ElMessage.error(this.t('pleaseSelectGroup'))
               return
             }
             
             let groupName = null
-            if (!this.isFromDrag) {
+            if (!this.isFromDrag && !this.editingStepId) {
               groupName = this.$refs.leftPanel.customGroups[this.currentGroupIndex].name
             }
             
             const commandData = {
+              type: 'other',
               name: this.otherCommandForm.name,
               description: this.otherCommandForm.description,
               subType: this.otherCommandForm.subType,
@@ -2645,6 +2904,26 @@ export default {
               commandData.resultVariable = this.otherCommandForm.resultVariable
               commandData.ignoreFields = this.otherCommandForm.ignoreFields
               commandData.replaceList = this.otherCommandForm.replaceList
+            }
+            
+            if (this.editingStepId) {
+              const activeTab = this.$refs.editorPanel?.getActiveTab()
+              if (activeTab) {
+                const step = activeTab.steps.find(s => s.id === this.editingStepId)
+                if (step) {
+                  step.name = this.otherCommandForm.name
+                  step.description = this.otherCommandForm.description
+                  step.commandData = commandData
+                  if (activeTab.folderName && activeTab.flowName) {
+                    this.$refs.editorPanel.saveFlowToFile(activeTab)
+                  }
+                  ElMessage.success(this.t('updateSuccess'))
+                }
+              }
+              this.otherCommandDialogVisible = false
+              this.editingStepId = null
+              this.isEditingCommand = false
+              return
             }
             
             if (this.isFromDrag) {
@@ -2707,6 +2986,7 @@ export default {
       this.contextMenuVisible = false
       this.isEditingCommand = false
       this.isFromDrag = false
+      this.editingStepId = null
       this.resetDatabaseCommandForm()
       this.databaseCommandDialogVisible = true
       this.$nextTick(() => {
@@ -2733,17 +3013,18 @@ export default {
       this.$refs.databaseCommandForm.validate(async (valid) => {
         if (valid) {
           try {
-            if (!this.isFromDrag && (this.currentGroupIndex === null || !this.$refs.leftPanel.customGroups[this.currentGroupIndex])) {
+            if (!this.isFromDrag && !this.editingStepId && (this.currentGroupIndex === null || !this.$refs.leftPanel.customGroups[this.currentGroupIndex])) {
               ElMessage.error(this.t('pleaseSelectGroup'))
               return
             }
             
             let groupName = null
-            if (!this.isFromDrag) {
+            if (!this.isFromDrag && !this.editingStepId) {
               groupName = this.$refs.leftPanel.customGroups[this.currentGroupIndex].name
             }
             
             const commandData = {
+              type: 'database',
               name: this.databaseCommandForm.name,
               description: this.databaseCommandForm.description,
               url: this.databaseCommandForm.url,
@@ -2757,6 +3038,26 @@ export default {
               commandData.fileName = this.databaseCommandForm.fileName
               commandData.storedFilename = this.databaseCommandForm.storedFilename
               commandData.absolutePath = this.databaseCommandForm.absolutePath
+            }
+            
+            if (this.editingStepId) {
+              const activeTab = this.$refs.editorPanel?.getActiveTab()
+              if (activeTab) {
+                const step = activeTab.steps.find(s => s.id === this.editingStepId)
+                if (step) {
+                  step.name = this.databaseCommandForm.name
+                  step.description = this.databaseCommandForm.description
+                  step.commandData = commandData
+                  if (activeTab.folderName && activeTab.flowName) {
+                    this.$refs.editorPanel.saveFlowToFile(activeTab)
+                  }
+                  ElMessage.success(this.t('updateSuccess'))
+                }
+              }
+              this.databaseCommandDialogVisible = false
+              this.editingStepId = null
+              this.isEditingCommand = false
+              return
             }
             
             if (this.isFromDrag) {

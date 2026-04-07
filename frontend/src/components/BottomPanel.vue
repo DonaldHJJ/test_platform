@@ -6,6 +6,7 @@
           <el-table :data="logsData" style="width: 100%; height: 100%" stripe border fit>
             <el-table-column prop="timestamp" :label="t('time')" width="180"></el-table-column>
             <el-table-column prop="componentId" :label="t('componentId')" width="200"></el-table-column>
+            <el-table-column prop="level" :label="t('level')" width="120"></el-table-column>
             <el-table-column prop="message" :label="t('logInfo')"></el-table-column>
           </el-table>
         </div>
@@ -23,6 +24,7 @@ const messages = {
     errors: 'Errors',
     time: 'Occurrence Time',
     componentId: 'Component ID',
+    level: 'Level',
     logInfo: 'Log Info',
     errorInfo: 'Error Info'
   },
@@ -31,6 +33,7 @@ const messages = {
     errors: '错误列表',
     time: '发生时间',
     componentId: '组件标识',
+    level: '级别',
     logInfo: '日志信息',
     errorInfo: '错误信息'
   }
@@ -56,7 +59,7 @@ export default {
     return {
       activeBottomTab: 'logs',
       errorsData: Array(5).fill({ time: '', message: '' }),
-      logsData: Array(5).fill({ timestamp: '', componentId: '', message: '' }),
+      logsData: Array(5).fill({ timestamp: '', componentId: '', level: '', message: '' }),
       adjustTimer: null
     }
   },
@@ -148,13 +151,13 @@ export default {
         
         this.errorsData = Array(rowCount).fill({ time: '', message: '' })
         if (resetLogs || !this.logsData || this.logsData.length === 0) {
-          this.logsData = Array(rowCount).fill({ timestamp: '', componentId: '', message: '' })
+          this.logsData = Array(rowCount).fill({ timestamp: '', componentId: '', level: '', message: '' })
         }
       } catch (error) {
         console.error('Error adjusting table rows:', error)
         this.errorsData = Array(5).fill({ time: '', message: '' })
         if (resetLogs || !this.logsData || this.logsData.length === 0) {
-          this.logsData = Array(5).fill({ timestamp: '', componentId: '', message: '' })
+          this.logsData = Array(5).fill({ timestamp: '', componentId: '', level: '', message: '' })
         }
       }
     }
