@@ -1992,6 +1992,12 @@ export default {
     async confirmGroup() {
       if (this.groupName.trim()) {
         try {
+          const existingGroup = this.$refs.leftPanel.customGroups?.find(group => group.name === this.groupName)
+          if (existingGroup) {
+            ElMessage.error(this.t('folderAlreadyExists'))
+            return
+          }
+
           const response = await fetch('/api/create-group', {
             method: 'POST',
             headers: {
