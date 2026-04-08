@@ -164,7 +164,9 @@ const messages = {
     folderDeleted: 'Folder deleted successfully',
     folderDeleteFailed: 'Failed to delete folder',
     pleaseEnterFlowName: 'Please enter flow name',
-    pleaseEnterFlowDescription: 'Please enter flow description'
+    pleaseEnterFlowDescription: 'Please enter flow description',
+    fileAlreadyExists: 'File already exists',
+    folderAlreadyExists: 'Folder already exists'
   },
   '简体中文': {
     noContent: '暂无内容',
@@ -195,7 +197,9 @@ const messages = {
     folderDeleted: '文件夹删除成功',
     folderDeleteFailed: '删除文件夹失败',
     pleaseEnterFlowName: '请输入流程名称',
-    pleaseEnterFlowDescription: '请输入流程描述'
+    pleaseEnterFlowDescription: '请输入流程描述',
+    fileAlreadyExists: '文件已存在',
+    folderAlreadyExists: '文件夹已存在'
   }
 }
 
@@ -275,6 +279,21 @@ export default {
         text = text.replace(`{${paramKey}}`, params[paramKey])
       })
       return text
+    },
+    getErrorMessage(error) {
+      if (!error) return ''
+      
+      const errorLower = error.toLowerCase()
+      
+      if (errorLower.includes('file already exists') || errorLower.includes('文件已存在')) {
+        return this.t('fileAlreadyExists')
+      }
+      
+      if (errorLower.includes('folder already exists') || errorLower.includes('文件夹已存在')) {
+        return this.t('folderAlreadyExists')
+      }
+      
+      return error
     },
     handleContextMenu(event, node) {
       this.contextMenuType = node === null ? 'empty' : 'folder'
@@ -374,7 +393,7 @@ export default {
             this.$emit('delete-flow', flowName)
           } else {
             console.error('删除流程失败:', data.error)
-            ElMessage.error(data.error)
+            ElMessage.error(this.getErrorMessage(data.error))
           }
         } catch (error) {
           if (error !== 'cancel') {
@@ -408,7 +427,7 @@ export default {
             await this.loadFlowFolders()
           } else {
             console.error('重命名流程失败:', data.error)
-            ElMessage.error(data.error)
+            ElMessage.error(this.getErrorMessage(data.error))
           }
         } catch (error) {
           console.error('重命名流程失败:', error)
@@ -446,7 +465,7 @@ export default {
                 this.$emit('create-flow', this.flowForm.flowName)
               } else {
                 console.error('创建流程失败:', data.error)
-                ElMessage.error(data.error)
+                ElMessage.error(this.getErrorMessage(data.error))
               }
             } catch (error) {
               console.error('创建流程失败:', error)
@@ -486,7 +505,7 @@ export default {
           await this.loadFlowFolders()
         } else {
           console.error('删除文件夹失败:', resData.error)
-          ElMessage.error(resData.error)
+          ElMessage.error(this.getErrorMessage(resData.error))
         }
       } catch (error) {
         if (error !== 'cancel') {
@@ -529,7 +548,7 @@ export default {
             await this.loadFlowFolders()
           } else {
             console.error('创建分组失败:', data.error)
-            ElMessage.error(data.error)
+            ElMessage.error(this.getErrorMessage(data.error))
           }
         } catch (error) {
           console.error('创建分组失败:', error)
