@@ -529,7 +529,7 @@ export default {
             await this.loadFlowFolders()
           } else {
             console.error('创建分组失败:', data.error)
-            ElMessage.error(data.error)
+            ElMessage.error(this.getErrorMessage(data.error))
           }
         } catch (error) {
           console.error('创建分组失败:', error)
