@@ -1273,22 +1273,34 @@ export default {
       return text
     },
     getErrorMessage(error) {
+      console.log('getErrorMessage 被调用，error:', error)
       if (!error) return ''
       
       const errorLower = error.toLowerCase()
       
+      console.log('errorLower:', errorLower)
+      console.log('当前语言:', this.language)
+      console.log('t(folderAlreadyExists):', this.t('folderAlreadyExists'))
+      
       if (errorLower.includes('file already exists') || errorLower.includes('文件已存在')) {
-        return this.t('fileAlreadyExists')
+        const result = this.t('fileAlreadyExists')
+        console.log('返回 fileAlreadyExists:', result)
+        return result
       }
       
       if (errorLower.includes('folder already exists') || errorLower.includes('文件夹已存在')) {
-        return this.t('folderAlreadyExists')
+        const result = this.t('folderAlreadyExists')
+        console.log('返回 folderAlreadyExists:', result)
+        return result
       }
       
       if (errorLower.includes('component name already exists') || errorLower.includes('组件名称已存在')) {
-        return this.t('componentNameAlreadyExists')
+        const result = this.t('componentNameAlreadyExists')
+        console.log('返回 componentNameAlreadyExists:', result)
+        return result
       }
       
+      console.log('返回原始错误:', error)
       return error
     },
     async handleSave() {
