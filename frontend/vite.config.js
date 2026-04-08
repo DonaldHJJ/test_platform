@@ -8,6 +8,7 @@ export default defineConfig({
   plugins: [vue(), createGroupPlugin()],
   publicDir: 'public',
   server: {
+    host: '0.0.0.0',
     port: config.devServerPort,
     fs: {
       allow: ['..']
