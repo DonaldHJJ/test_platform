@@ -629,8 +629,6 @@ const messages = {
     enterFolderName: 'Please select folder',
     createFlow: 'Create Flow',
     variableAlreadyExists: 'Variable name already exists',
-    fileAlreadyExists: 'File already exists',
-    folderAlreadyExists: 'Folder already exists',
     saveSuccess: 'Save Success',
     createSuccess: 'Create Success',
     createFailed: 'Create Failed',
@@ -812,8 +810,6 @@ const messages = {
     enterFolderName: '请选择分组',
     createFlow: '新建流程',
     variableAlreadyExists: '变量名已存在',
-    fileAlreadyExists: '文件已存在',
-    folderAlreadyExists: '文件夹已存在',
     saveSuccess: '保存成功',
     createSuccess: '创建成功',
     createFailed: '创建失败',
@@ -1274,21 +1270,6 @@ export default {
       })
       return text
     },
-    getErrorMessage(error) {
-      if (!error) return ''
-      
-      const errorLower = error.toLowerCase()
-      
-      if (errorLower.includes('file already exists') || errorLower.includes('文件已存在')) {
-        return this.t('fileAlreadyExists')
-      }
-      
-      if (errorLower.includes('folder already exists') || errorLower.includes('文件夹已存在')) {
-        return this.t('folderAlreadyExists')
-      }
-      
-      return error
-    },
     async handleSave() {
       if (!this.$refs.editorPanel) {
         ElMessage.success(this.t('saveSuccess'))
@@ -1387,7 +1368,7 @@ export default {
               this.$refs.rightPanel.refreshFlowFolders()
             }
           } else {
-            ElMessage.error(this.getErrorMessage(data.error) || this.t('createFailed'))
+            ElMessage.error(data.error || this.t('createFailed'))
           }
         } catch (error) {
           console.error('创建流程失败:', error)
@@ -1648,7 +1629,7 @@ export default {
             }
             this.saveFlowDialogVisible = false
           } else {
-            ElMessage.error(this.getErrorMessage(data.error) || this.t('saveFailed'))
+            ElMessage.error(data.error || this.t('saveFailed'))
           }
         } catch (error) {
           console.error('保存流程失败:', error)
@@ -2601,7 +2582,7 @@ export default {
               this.serverCommandDialogVisible = false
             } else {
               console.error(this.isEditingCommand ? '更新服务器组件失败:' : '创建服务器组件失败:', data.error)
-              ElMessage.error(this.getErrorMessage(data.error))
+              ElMessage.error(data.error)
             }
           } catch (error) {
             console.error(this.isEditingCommand ? '更新服务器组件失败:' : '创建服务器组件失败:', error)
@@ -2722,7 +2703,7 @@ export default {
                 this.apiCommandDialogVisible = false
               } else {
                 console.error(this.isEditingCommand ? '更新API组件失败:' : '创建API组件失败:', data.error)
-                ElMessage.error(this.getErrorMessage(data.error))
+                ElMessage.error(data.error)
               }
             } catch (error) {
               console.error(this.isEditingCommand ? '更新API组件失败:' : '创建API组件失败:', error)
@@ -2842,7 +2823,7 @@ export default {
                 this.webCommandDialogVisible = false
               } else {
                 console.error(this.isEditingCommand ? '更新WEB组件失败:' : '创建WEB组件失败:', data.error)
-                ElMessage.error(this.getErrorMessage(data.error))
+                ElMessage.error(data.error)
               }
             } catch (error) {
               console.error(this.isEditingCommand ? '更新WEB组件失败:' : '创建WEB组件失败:', error)
@@ -2991,7 +2972,7 @@ export default {
               this.otherCommandDialogVisible = false
             } else {
               console.error(this.isEditingCommand ? '更新其它组件失败:' : '创建其它组件失败:', data.error)
-              ElMessage.error(this.getErrorMessage(data.error))
+              ElMessage.error(data.error)
             }
           } catch (error) {
             console.error(this.isEditingCommand ? '更新其它组件失败:' : '创建其它组件失败:', error)
@@ -3125,7 +3106,7 @@ export default {
               this.databaseCommandDialogVisible = false
             } else {
               console.error(this.isEditingCommand ? '更新数据库组件失败:' : '创建数据库组件失败:', data.error)
-              ElMessage.error(this.getErrorMessage(data.error))
+              ElMessage.error(data.error)
             }
           } catch (error) {
             console.error(this.isEditingCommand ? '更新数据库组件失败:' : '创建数据库组件失败:', error)
