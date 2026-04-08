@@ -1683,7 +1683,8 @@ export default {
             name: step.name,
             description: step.description,
             data: step.commandData || null,
-            stepNumber: step.stepNumber || (index + 1)
+            stepNumber: step.stepNumber || (index + 1),
+            disabled: step.disabled || false
           })),
           edges: [],
           globalVariables: this.globalVariables || []

@@ -15,7 +15,8 @@
         "resultVariable": "res1",
         "command": "123"
       },
-      "stepNumber": 1
+      "stepNumber": 1,
+      "disabled": false
     },
     {
       "id": 1775575927618,
@@ -31,7 +32,8 @@
         "body": "",
         "resultVariable": "res2"
       },
-      "stepNumber": 2
+      "stepNumber": 2,
+      "disabled": false
     },
     {
       "id": 1775575955814,
@@ -46,7 +48,8 @@
         "inputValue": "",
         "resultVariable": "res3"
       },
-      "stepNumber": 3
+      "stepNumber": 3,
+      "disabled": false
     },
     {
       "id": 1775575969008,
@@ -60,7 +63,8 @@
         "resultVariable": "res4",
         "sql": "123"
       },
-      "stepNumber": 4
+      "stepNumber": 4,
+      "disabled": false
     }
   ],
   "edges": [],

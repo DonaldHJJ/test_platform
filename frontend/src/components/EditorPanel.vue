@@ -25,7 +25,8 @@
                   :class="{ 
                     'dragging': draggedTabId === tab.id && draggedIndex === index, 
                     'drag-over': draggedTabId === tab.id && dragOverIndex === index,
-                    'flow-step': step.commandData?.isFlow
+                    'flow-step': step.commandData?.isFlow,
+                    'disabled': step.disabled
                   }"
                   draggable="true"
                   @dragstart="handleStepDragStart(tab.id, index)"
@@ -40,6 +41,15 @@
                   <div class="step-content">
                     <div class="step-description">{{ step.description }}</div>
                   </div>
+                  <el-button 
+                    class="disable-btn" 
+                    :type="step.disabled ? 'success' : 'info'" 
+                    size="small" 
+                    circle
+                    @click.stop="toggleStepDisabled(tab.id, step.id)"
+                  >
+                    <el-icon><CircleCheck v-if="step.disabled" /><Close v-else /></el-icon>
+                  </el-button>
                   <el-button 
                     class="delete-btn" 
                     type="danger" 
@@ -66,7 +76,7 @@
 </template>
 
 <script>
-import { Plus, Delete } from '@element-plus/icons-vue'
+import { Plus, Delete, CircleCheck, Close } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 const messages = {
@@ -86,7 +96,9 @@ export default {
   name: 'EditorPanel',
   components: {
     Plus,
-    Delete
+    Delete,
+    CircleCheck,
+    Close
   },
   props: {
     globalVariables: {
@@ -253,7 +265,8 @@ export default {
                   stepNumber: index + 1,
                   name: node.name || '',
                   description: node.description || '',
-                  commandData: node.data || null
+                  commandData: node.data || null,
+                  disabled: node.disabled || false
                 }))
               }
             }
@@ -278,7 +291,8 @@ export default {
             name: step.name,
             description: step.description,
             data: step.commandData || null,
-            stepNumber: step.stepNumber || (index + 1)
+            stepNumber: step.stepNumber || (index + 1),
+            disabled: step.disabled || false
           })),
           edges: [],
           globalVariables: this.globalVariables || []
@@ -378,7 +392,8 @@ export default {
           id: Date.now(),
           stepNumber: this.activeTab.steps.length + 1,
           ...stepData,
-          commandData: commandData || null
+          commandData: commandData || null,
+          disabled: false
         }
         this.activeTab.steps.push(newStep)
         console.log('添加步骤后:', this.activeTab)
@@ -455,7 +470,8 @@ export default {
             name: node.name,
             description: node.description,
             commandData: node.data || null,
-            stepNumber: node.stepNumber
+            stepNumber: node.stepNumber,
+            disabled: node.disabled || false
           }))
           
           const newId = Date.now()
@@ -609,6 +625,18 @@ export default {
       if (step.commandData) {
         this.$emit('step-double-click', step)
       }
+    },
+    toggleStepDisabled(tabId, stepId) {
+      const tab = this.flowTabs.find(t => t.id === tabId)
+      if (tab) {
+        const step = tab.steps.find(s => s.id === stepId)
+        if (step) {
+          step.disabled = !step.disabled
+          if (tab.folderName && tab.flowName) {
+            this.saveFlowToFile(tab)
+          }
+        }
+      }
     }
   }
 }
@@ -741,6 +769,21 @@ export default {
   font-weight: 500;
 }
 
+.step-card.disabled {
+  background-color: #f5f5f5;
+  border-color: #e0e0e0;
+  opacity: 0.6;
+}
+
+.step-card.disabled .step-number {
+  background-color: #909399;
+}
+
+.step-card.disabled .step-description {
+  color: #909399;
+  text-decoration: line-through;
+}
+
 .step-number {
   display: flex;
   align-items: center;
@@ -775,7 +818,14 @@ export default {
   transition: opacity 0.3s;
 }
 
-.step-card:hover .delete-btn {
+.disable-btn {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.step-card:hover .delete-btn,
+.step-card:hover .disable-btn {
   opacity: 1;
 }
 
