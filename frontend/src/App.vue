@@ -58,6 +58,7 @@
           @create-flow="handleCreateFlow"
           @delete-flow="handleDeleteFlow"
           @open-flow="handleOpenFlow"
+          @rename-flow="handleRenameFlow"
         />
       </div>
     </div>
@@ -545,6 +546,7 @@ import apiConfig from './config/api.js'
 
 const messages = {
   'English': {
+    pageTitle: 'Test Case Management Platform',
     newGroup: 'New Group',
     newServerComponent: 'New Server Component',
     newAPIComponent: 'New API Component',
@@ -630,6 +632,8 @@ const messages = {
     createFlow: 'Create Flow',
     variableAlreadyExists: 'Variable name already exists',
     componentNameAlreadyExists: 'Component name already exists',
+    fileAlreadyExists: 'File already exists',
+    folderAlreadyExists: 'Folder already exists',
     saveSuccess: 'Save Success',
     createSuccess: 'Create Success',
     createFailed: 'Create Failed',
@@ -727,6 +731,7 @@ const messages = {
     updateSuccess: 'Update success'
   },
   '简体中文': {
+    pageTitle: '测试案例管理平台',
     newGroup: '新建分组',
     newServerComponent: '新建服务器组件',
     newAPIComponent: '新建API组件',
@@ -812,6 +817,8 @@ const messages = {
     createFlow: '新建流程',
     variableAlreadyExists: '变量名已存在',
     componentNameAlreadyExists: '组件名称已存在',
+    fileAlreadyExists: '文件已存在',
+    folderAlreadyExists: '文件夹已存在',
     saveSuccess: '保存成功',
     createSuccess: '创建成功',
     createFailed: '创建失败',
@@ -1254,6 +1261,8 @@ export default {
     } catch (error) {
       console.error('获取项目根路径失败:', error)
     }
+    // 设置初始页面标题
+    document.title = this.t('pageTitle')
     // 添加点击外部关闭菜单的事件监听
     document.addEventListener('click', this.closeContextMenu)
     // 添加保存快捷键监听
@@ -1354,6 +1363,7 @@ export default {
       console.log('handleLanguageChange 被调用:', language)
       this.currentLanguage = language
       localStorage.setItem('currentLanguage', language)
+      document.title = this.t('pageTitle')
     },
     handleActiveTabChange(tabName) {
       console.log('handleActiveTabChange 被调用:', tabName)
@@ -1670,9 +1680,18 @@ export default {
         }
       })
     },
-    handleCreateFlow(flowName) {
+    handleCreateFlow(data) {
       if (this.$refs.editorPanel) {
-        this.$refs.editorPanel.addFlowTab(flowName)
+        if (typeof data === 'string') {
+          this.$refs.editorPanel.addFlowTab(data)
+        } else {
+          this.$refs.editorPanel.addFlowTab(
+            data.flowName,
+            data.folderName,
+            data.flowName,
+            data.description
+          )
+        }
       }
     },
     async handleOpenFlow({ folderName, flowName }) {
@@ -1684,6 +1703,12 @@ export default {
     handleDeleteFlow(flowName) {
       if (this.$refs.editorPanel) {
         this.$refs.editorPanel.closeFlowTabByName(flowName)
+      }
+    },
+    handleRenameFlow({ oldFolderName, oldFlowName, newFlowName }) {
+      console.log('handleRenameFlow 被调用', { oldFolderName, oldFlowName, newFlowName })
+      if (this.$refs.editorPanel) {
+        this.$refs.editorPanel.renameFlowTabs(oldFolderName, oldFlowName, newFlowName)
       }
     },
     handleKeyDown(event) {

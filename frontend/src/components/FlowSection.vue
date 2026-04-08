@@ -214,7 +214,7 @@ export default {
       default: 'English'
     }
   },
-  emits: ['create-flow', 'delete-flow', 'open-flow'],
+  emits: ['create-flow', 'delete-flow', 'open-flow', 'rename-flow'],
   data() {
     return {
       contextMenuVisible: false,
@@ -406,6 +406,11 @@ export default {
             console.log('流程重命名成功:', data.newFilePath)
             ElMessage.success(this.t('flowRenamed'))
             await this.loadFlowFolders()
+            this.$emit('rename-flow', {
+              oldFolderName: this.rightClickNode.folderName,
+              oldFlowName: this.rightClickNode.fileName,
+              newFlowName: this.editFlowName
+            })
           } else {
             console.error('重命名流程失败:', data.error)
             ElMessage.error(data.error)
@@ -443,7 +448,11 @@ export default {
                 console.log('流程创建成功:', data.filePath)
                 ElMessage.success(this.t('flowCreated'))
                 await this.loadFlowFolders()
-                this.$emit('create-flow', this.flowForm.flowName)
+                this.$emit('create-flow', {
+                  folderName: folderName,
+                  flowName: this.flowForm.flowName,
+                  description: this.flowForm.description
+                })
               } else {
                 console.error('创建流程失败:', data.error)
                 ElMessage.error(this.getErrorMessage(data.error))

@@ -577,6 +577,20 @@ export default {
         this.flowTabs[tabIndex].name = newName
       }
     },
+    renameFlowTabs(oldFolderName, oldFlowName, newFlowName) {
+      console.log('renameFlowTabs 被调用', { oldFolderName, oldFlowName, newFlowName })
+      this.flowTabs = this.flowTabs.map(tab => {
+        if (tab.folderName === oldFolderName && tab.flowName === oldFlowName) {
+          console.log('找到匹配的标签页，更新名称', tab)
+          return {
+            ...tab,
+            name: newFlowName,
+            flowName: newFlowName
+          }
+        }
+        return tab
+      })
+    },
     handleStepDragStart(tabId, index) {
       this.draggedTabId = tabId
       this.draggedIndex = index

@@ -1,9 +1,9 @@
 {
-  "name": "sgs",
+  "name": "Server",
   "commands": [
     {
       "type": "server",
-      "name": "tt",
+      "name": "Dev09",
       "description": "",
       "host": "",
       "uploadFile": false,

@@ -60,7 +60,9 @@ export default {
       activeBottomTab: 'logs',
       errorsData: Array(5).fill({ time: '', message: '' }),
       logsData: Array(5).fill({ timestamp: '', componentId: '', level: '', message: '' }),
-      adjustTimer: null
+      adjustTimer: null,
+      pollTimer: null,
+      lastLogHash: ''
     }
   },
   mounted() {
@@ -69,12 +71,14 @@ export default {
     })
     if (this.activeTabName) {
       this.loadLogsData()
+      this.startPolling()
     }
   },
   beforeDestroy() {
     if (this.adjustTimer) {
       clearTimeout(this.adjustTimer)
     }
+    this.stopPolling()
   },
   watch: {
     height: {
@@ -94,9 +98,14 @@ export default {
       deep: false
     },
     activeTabName: {
-      handler(newName) {
+      handler(newName, oldName) {
+        if (newName !== oldName) {
+          this.stopPolling()
+          this.lastLogHash = ''
+        }
         if (newName) {
           this.loadLogsData()
+          this.startPolling()
         }
       },
       immediate: false
@@ -106,7 +115,31 @@ export default {
     t(key) {
       return messages[this.language]?.[key] || messages['English'][key]
     },
-    async loadLogsData() {
+    generateHash(data) {
+      const str = JSON.stringify(data)
+      let hash = 0
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i)
+        hash = ((hash << 5) - hash) + char
+        hash = hash & hash
+      }
+      return hash.toString()
+    },
+    startPolling() {
+      this.stopPolling()
+      this.pollTimer = setInterval(() => {
+        if (this.activeTabName && this.activeBottomTab === 'logs') {
+          this.loadLogsData(true)
+        }
+      }, 2000)
+    },
+    stopPolling() {
+      if (this.pollTimer) {
+        clearInterval(this.pollTimer)
+        this.pollTimer = null
+      }
+    },
+    async loadLogsData(isPolling = false) {
       if (!this.activeTabName) {
         console.log('没有活跃的标签页名称，重置到初始状态')
         this.adjustTableRows(this.height, true)
@@ -114,25 +147,46 @@ export default {
       }
       
       try {
-        console.log('加载日志数据，标签页名称:', this.activeTabName)
+        if (!isPolling) {
+          console.log('加载日志数据，标签页名称:', this.activeTabName)
+        }
         const fileName = `${this.activeTabName}_logs.json`
         const response = await fetch(`${apiConfig.publicPath}result/log/${fileName}`)
         
         if (response.ok) {
           const data = await response.json()
-          console.log('加载到的日志数据:', data)
+          let newData
           if (Array.isArray(data)) {
-            this.logsData = data
+            newData = data
           } else if (data.logs && Array.isArray(data.logs)) {
-            this.logsData = data.logs
+            newData = data.logs
+          }
+          
+          if (newData) {
+            const currentHash = this.generateHash(newData)
+            if (currentHash !== this.lastLogHash) {
+              if (!isPolling) {
+                console.log('加载到的日志数据:', data)
+              } else {
+                console.log('日志文件已更新，重新加载')
+              }
+              this.logsData = newData
+              this.lastLogHash = currentHash
+            }
           }
         } else {
-          console.log('日志文件不存在或加载失败，重置到初始状态:', fileName)
-          this.adjustTableRows(this.height, true)
+          if (!isPolling) {
+            console.log('日志文件不存在或加载失败，重置到初始状态:', fileName)
+            this.adjustTableRows(this.height, true)
+            this.lastLogHash = ''
+          }
         }
       } catch (error) {
-        console.error('加载日志数据失败，重置到初始状态:', error)
-        this.adjustTableRows(this.height, true)
+        if (!isPolling) {
+          console.error('加载日志数据失败，重置到初始状态:', error)
+          this.adjustTableRows(this.height, true)
+          this.lastLogHash = ''
+        }
       }
     },
     adjustTableRows(height, resetLogs = false) {
