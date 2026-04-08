@@ -56,14 +56,37 @@
       "name": "sql",
       "description": "sql",
       "data": {
-        "type": "sql",
+        "type": "server",
         "name": "sql",
         "description": "sql",
-        "url": "123",
+        "host": "ttt",
+        "uploadFile": true,
         "resultVariable": "res4",
-        "sql": "123"
+        "path": "ttt",
+        "fileName": "ww.sql",
+        "storedFilename": "ww_1775634513115.sql",
+        "absolutePath": "D:\\projects\\test_platform\\frontend\\uploadFiles\\ww_1775634513115.sql"
       },
       "stepNumber": 4,
+      "disabled": false
+    },
+    {
+      "id": 1775634547957,
+      "name": "o",
+      "description": "h",
+      "data": {
+        "type": "other",
+        "name": "o",
+        "description": "h",
+        "subType": "compareFile",
+        "resultVariable": "res4",
+        "fileName": "ww.sql",
+        "storedFilename": "ww_1775634546212.sql",
+        "absolutePath": "D:\\projects\\test_platform\\frontend\\uploadFiles\\ww_1775634546212.sql",
+        "ignoreFields": "",
+        "replaceList": []
+      },
+      "stepNumber": 5,
       "disabled": false
     }
   ],

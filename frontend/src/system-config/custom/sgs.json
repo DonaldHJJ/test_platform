@@ -1,4 +1,14 @@
 {
   "name": "sgs",
-  "commands": []
+  "commands": [
+    {
+      "type": "server",
+      "name": "tt",
+      "description": "",
+      "host": "",
+      "uploadFile": false,
+      "resultVariable": "",
+      "command": ""
+    }
+  ]
 }
