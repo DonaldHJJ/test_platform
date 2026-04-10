@@ -318,6 +318,64 @@ export default {
         console.error('保存流程到文件失败:', error)
       }
     },
+    async updateFlowRunningStatus(folderName, flowName, isRunning) {
+      if (!folderName || !flowName) {
+        console.log('不更新运行状态：缺少 folderName 或 flowName', { folderName, flowName })
+        return
+      }
+      
+      try {
+        const getResponse = await fetch(`/api/get-flow-file?folderName=${encodeURIComponent(folderName)}&flowName=${encodeURIComponent(flowName)}`)
+        const getResult = await getResponse.json()
+        
+        if (!getResult.success) {
+          console.error('获取流程文件失败:', getResult)
+          return
+        }
+        
+        const flowData = {
+          ...getResult.data,
+          isRunning: isRunning
+        }
+        
+        console.log('更新流程运行状态:', { folderName, flowName, isRunning })
+        
+        const response = await fetch('/api/update-flow-file', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            folderName: folderName,
+            flowName: flowName,
+            data: flowData
+          })
+        })
+        
+        const result = await response.json()
+        console.log('更新流程运行状态结果:', result)
+      } catch (error) {
+        console.error('更新流程运行状态失败:', error)
+      }
+    },
+    async checkFlowRunningStatus(folderName, flowName) {
+      if (!folderName || !flowName) {
+        return false
+      }
+      
+      try {
+        const response = await fetch(`/api/get-flow-file?folderName=${encodeURIComponent(folderName)}&flowName=${encodeURIComponent(flowName)}`)
+        const result = await response.json()
+        
+        if (result.success && result.data) {
+          return result.data.isRunning === true
+        }
+        return false
+      } catch (error) {
+        console.error('检查流程运行状态失败:', error)
+        return false
+      }
+    },
     handleAddTabClick() {
       this.$emit('add-tab-click')
     },

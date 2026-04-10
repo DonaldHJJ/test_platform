@@ -697,6 +697,8 @@ const messages = {
     sqlFileOnly: 'Only .sql files are allowed',
     pleaseSelectGroup: 'Please select a group',
     componentAddedSuccess: 'Component added successfully',
+    flowIsRunning: 'Flow is already running, please wait for it to complete',
+    runFailed: 'Run failed',
     createServerComponentFailed: 'Failed to create server component, please check if server is running',
     updateServerComponentFailed: 'Failed to update server component, please check if server is running',
     createAPIComponentFailed: 'Failed to create API component, please check if server is running',
@@ -884,6 +886,8 @@ const messages = {
     sqlFileOnly: '只能上传.sql格式的文件！',
     pleaseSelectGroup: '请选择一个分组',
     componentAddedSuccess: '组件添加成功',
+    flowIsRunning: '流程正在运行中，请等待完成',
+    runFailed: '运行失败',
     createServerComponentFailed: '创建服务器组件失败，请检查服务器是否运行',
     updateServerComponentFailed: '更新服务器组件失败，请检查服务器是否运行',
     createAPIComponentFailed: '创建API组件失败，请检查服务器是否运行',
@@ -1736,7 +1740,18 @@ export default {
         return
       }
       
+      let didSetRunning = false
+      
       try {
+        const isRunning = await this.$refs.editorPanel.checkFlowRunningStatus(activeTab.folderName, activeTab.flowName)
+        if (isRunning) {
+          ElMessage.warning(this.t('flowIsRunning'))
+          return
+        }
+        
+        await this.$refs.editorPanel.updateFlowRunningStatus(activeTab.folderName, activeTab.flowName, true)
+        didSetRunning = true
+        
         const flowData = {
           name: activeTab.flowName || activeTab.name,
           description: activeTab.description || '',
@@ -1770,6 +1785,10 @@ export default {
       } catch (error) {
         console.error('运行流程失败:', error)
         ElMessage.error(this.t('runFailed') + ', ' + this.t('pleaseCheckServer'))
+      } finally {
+        if (didSetRunning && activeTab?.folderName && activeTab?.flowName) {
+          await this.$refs.editorPanel.updateFlowRunningStatus(activeTab.folderName, activeTab.flowName, false)
+        }
       }
     },
     
