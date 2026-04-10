@@ -420,7 +420,7 @@
         <el-form-item :label="t('url')" prop="url">
           <el-input v-model="databaseCommandForm.url" :placeholder="t('pleaseEnterUrl')" clearable></el-input>
         </el-form-item>
-        <el-form-item :label="t('type')" prop="type">
+        <el-form-item :label="t('scriptType')" prop="type">
           <el-select v-model="databaseCommandForm.type" :placeholder="t('pleaseSelectType')" @change="handleDatabaseTypeChange">
             <el-option :label="t('sqlStatement')" value="sql"></el-option>
             <el-option :label="t('sqlFile')" value="file"></el-option>
@@ -563,6 +563,7 @@ const messages = {
     variableName: 'Name',
     pleaseEnterVariableName: 'Please enter variable name',
     type: 'Type',
+    scriptType: 'Script',
     pleaseSelectType: 'Please select type',
     pleaseEnterComponentName: 'Please enter name',
     pleaseEnterDescription: 'Please enter description',
@@ -622,6 +623,7 @@ const messages = {
     editServerComponent: 'Edit Server Component',
     editAPIComponent: 'Edit API Component',
     editWebComponent: 'Edit Web Component',
+    editDatabaseComponent: 'Edit Database Component',
     editOtherComponent: 'Edit Other Component',
     uploadFile: 'Upload',
     saveFlow: 'Save Flow',
@@ -748,6 +750,7 @@ const messages = {
     variableName: '变量名称',
     pleaseEnterVariableName: '请输入变量名称',
     type: '类型',
+    scriptType: '脚本',
     pleaseSelectType: '请选择类型',
     pleaseEnterComponentName: '请输入组件名称',
     pleaseEnterDescription: '请输入描述',
@@ -807,6 +810,7 @@ const messages = {
     editServerComponent: '编辑服务器组件',
     editAPIComponent: '编辑API组件',
     editWebComponent: '编辑Web组件',
+    editDatabaseComponent: '编辑数据库组件',
     editOtherComponent: '编辑其它组件',
     uploadFile: '上传文件',
     saveFlow: '保存流程',
@@ -1516,7 +1520,7 @@ export default {
           name: command.name,
           description: command.description,
           url: command.url,
-          type: command.type,
+          type: (command.scriptType && command.scriptType !== '') ? command.scriptType : (command.type && command.type !== 'database') ? command.type : 'sql',
           sql: command.sql || '',
           fileName: command.fileName || '',
           storedFilename: command.storedFilename || '',
@@ -2177,7 +2181,7 @@ export default {
           name: commandData.name || '',
           description: commandData.description || '',
           url: commandData.url || '',
-          type: commandData.type || 'sql',
+          type: (commandData.scriptType && commandData.scriptType !== '') ? commandData.scriptType : (commandData.type && commandData.type !== 'database') ? commandData.type : 'sql',
           sql: commandData.sql || '',
           fileName: commandData.fileName || '',
           storedFilename: commandData.storedFilename || '',
@@ -2299,7 +2303,7 @@ export default {
           name: command.name,
           description: command.description,
           url: command.url,
-          type: command.type,
+          type: (command.scriptType && command.scriptType !== '') ? command.scriptType : (command.type && command.type !== 'database') ? command.type : 'sql',
           sql: command.sql || '',
           fileName: command.fileName || '',
           storedFilename: command.storedFilename || '',
@@ -3132,7 +3136,7 @@ export default {
               name: this.databaseCommandForm.name,
               description: this.databaseCommandForm.description,
               url: this.databaseCommandForm.url,
-              type: this.databaseCommandForm.type,
+              scriptType: this.databaseCommandForm.type,
               resultVariable: this.databaseCommandForm.resultVariable
             }
             
