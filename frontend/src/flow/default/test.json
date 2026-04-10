@@ -1,6 +1,24 @@
 {
   "name": "test",
   "description": "123",
-  "nodes": [],
-  "edges": []
+  "nodes": [
+    {
+      "id": 1775806321978,
+      "name": "Dev09",
+      "description": "非同一人",
+      "data": {
+        "type": "server",
+        "name": "Dev09",
+        "description": "非同一人",
+        "host": "fy",
+        "uploadFile": false,
+        "resultVariable": "",
+        "command": "沸腾鱼"
+      },
+      "stepNumber": 1,
+      "disabled": false
+    }
+  ],
+  "edges": [],
+  "globalVariables": []
 }

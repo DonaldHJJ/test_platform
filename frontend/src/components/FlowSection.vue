@@ -15,7 +15,8 @@
           <div 
             class="custom-tree-node" 
             :draggable="data.type === 'file'"
-            @dblclick.stop="handleNodeDoubleClick(data)"
+            @dblclick.stop.prevent="handleNodeDoubleClick(data)"
+            @click.stop
             @dragstart="data.type === 'file' ? handleFlowDragStart($event, data) : null"
           >
             <el-icon v-if="data.type === 'folder'" class="folder-icon">
@@ -296,6 +297,7 @@ export default {
     },
     handleNodeDoubleClick(data) {
       if (data.type === 'file') {
+        console.log('双击流程节点:', data)
         this.$emit('open-flow', {
           folderName: data.folderName,
           flowName: data.label

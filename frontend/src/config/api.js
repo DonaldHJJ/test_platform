@@ -4,6 +4,7 @@ export default {
   devServerPort: 5173,
   endpoints: {
     runFlow: '/api/runFlow',
-    getReport: '/api/getReport'
+    getReport: '/api/getReport',
+    downloadFile: '/api/download-file'
   }
 }

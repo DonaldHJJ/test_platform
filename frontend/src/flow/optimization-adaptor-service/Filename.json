@@ -27,9 +27,11 @@
         "name": "dev",
         "description": "sdf",
         "url": "sef",
-        "scriptType": "sql",
+        "scriptType": "file",
         "resultVariable": "",
-        "sql": "123123"
+        "fileName": "ww.sql",
+        "storedFilename": "ww_1775801221385.sql",
+        "absolutePath": "D:\\projects\\test_platform\\frontend\\uploadFiles\\ww_1775801221385.sql"
       },
       "stepNumber": 2,
       "disabled": false
@@ -50,9 +52,23 @@
       },
       "stepNumber": 3,
       "disabled": false
+    },
+    {
+      "id": 1775804099251,
+      "name": "test",
+      "description": "123",
+      "data": {
+        "isFlow": true,
+        "folderName": "default",
+        "flowName": "test",
+        "description": "123",
+        "filePath": "D:\\projects\\test_platform\\frontend\\src\\flow\\default\\test.json"
+      },
+      "stepNumber": 4,
+      "disabled": false
     }
   ],
   "edges": [],
   "globalVariables": [],
-  "isRunning": true
+  "isRunning": false
 }

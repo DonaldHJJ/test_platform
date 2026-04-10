@@ -1593,7 +1593,7 @@ export default {
         console.log('流程文件绝对路径:', filePath)
         
         this.$refs.editorPanel.addStep({
-          name: `引用流程: ${flowName}`,
+          name: flowName,
           description: description || flowName
         }, {
           isFlow: true,
@@ -1703,9 +1703,11 @@ export default {
       }
     },
     async handleOpenFlow({ folderName, flowName }) {
-      console.log('handleOpenFlow 被调用', { folderName, flowName })
+      console.log('=== handleOpenFlow 被调用 ===', { folderName, flowName })
       if (this.$refs.editorPanel) {
+        console.log('准备调用 editorPanel.openFlowTab')
         await this.$refs.editorPanel.openFlowTab(folderName, flowName)
+        console.log('editorPanel.openFlowTab 调用完成')
       }
     },
     handleDeleteFlow(flowName) {
@@ -1825,27 +1827,37 @@ export default {
             })
             
             if (response.ok) {
-              const blob = await response.blob()
-              const contentDisposition = response.headers.get('Content-Disposition')
-              let fileName = `${tabName}_report.xlsx`
+              const result = await response.json()
+              console.log('后端返回的文件路径:', result)
               
-              if (contentDisposition) {
-                const fileNameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
-                if (fileNameMatch && fileNameMatch[1]) {
-                  fileName = fileNameMatch[1].replace(/['"]/g, '')
+              if (result.success && result.filePath) {
+                const filePath = result.filePath
+                const fileName = filePath.split(/[\\/]/).pop() || `${tabName}_report.xlsx`
+                
+                console.log('开始下载文件:', filePath)
+                
+                const downloadResponse = await fetch(`${apiConfig.apiBaseUrl}/api/download-file?filePath=${encodeURIComponent(filePath)}`, {
+                  method: 'GET'
+                })
+                
+                if (downloadResponse.ok) {
+                  const blob = await downloadResponse.blob()
+                  const url = window.URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url
+                  a.download = fileName
+                  document.body.appendChild(a)
+                  a.click()
+                  document.body.removeChild(a)
+                  window.URL.revokeObjectURL(url)
+                  
+                  ElMessage.success(this.t('downloadSuccess'))
+                } else {
+                  ElMessage.error(this.t('downloadFailed'))
                 }
+              } else {
+                ElMessage.error(result.error || this.t('downloadFailed'))
               }
-              
-              const url = window.URL.createObjectURL(blob)
-              const a = document.createElement('a')
-              a.href = url
-              a.download = fileName
-              document.body.appendChild(a)
-              a.click()
-              document.body.removeChild(a)
-              window.URL.revokeObjectURL(url)
-              
-              ElMessage.success(this.t('downloadSuccess'))
             } else {
               ElMessage.error(this.t('downloadFailed'))
             }
@@ -2139,6 +2151,14 @@ export default {
       console.log('双击编辑区卡片:', step)
       const commandData = step.commandData
       if (!commandData) {
+        return
+      }
+      
+      if (commandData.isFlow) {
+        console.log('双击引用流程卡片，打开流程标签页:', { folderName: commandData.folderName, flowName: commandData.flowName })
+        if (this.$refs.editorPanel) {
+          this.$refs.editorPanel.openFlowTab(commandData.folderName, commandData.flowName)
+        }
         return
       }
       
