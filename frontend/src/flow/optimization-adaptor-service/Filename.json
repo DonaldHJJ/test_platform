@@ -1,6 +1,57 @@
 {
-  "name": "Filename is wrong",
+  "name": "Filename",
   "description": "Filename is wrong",
-  "nodes": [],
-  "edges": []
+  "nodes": [
+    {
+      "id": 1775795384178,
+      "name": "Dev09",
+      "description": "dev09",
+      "data": {
+        "type": "server",
+        "name": "Dev09",
+        "description": "dev09",
+        "host": "123",
+        "uploadFile": false,
+        "resultVariable": "",
+        "command": "123"
+      },
+      "stepNumber": 1,
+      "disabled": false
+    },
+    {
+      "id": 1775795391448,
+      "name": "dev",
+      "description": "sdf",
+      "data": {
+        "type": "database",
+        "name": "dev",
+        "description": "sdf",
+        "url": "sef",
+        "scriptType": "sql",
+        "resultVariable": "",
+        "sql": "123123"
+      },
+      "stepNumber": 2,
+      "disabled": false
+    },
+    {
+      "id": 1775795416387,
+      "name": "12341241",
+      "description": "124123123123123",
+      "data": {
+        "type": "api",
+        "name": "12341241",
+        "description": "124123123123123",
+        "url": "123123",
+        "method": "POST",
+        "headers": "123",
+        "body": "",
+        "resultVariable": ""
+      },
+      "stepNumber": 3,
+      "disabled": false
+    }
+  ],
+  "edges": [],
+  "globalVariables": []
 }

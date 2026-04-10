@@ -1,4 +1,13 @@
 {
   "name": "Database",
-  "commands": []
+  "commands": [
+    {
+      "type": "database",
+      "name": "dev",
+      "description": "",
+      "url": "",
+      "scriptType": "",
+      "resultVariable": ""
+    }
+  ]
 }

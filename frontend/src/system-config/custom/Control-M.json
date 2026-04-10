@@ -1,4 +1,15 @@
 {
   "name": "Control-M",
-  "commands": []
+  "commands": [
+    {
+      "type": "api",
+      "name": "12341241",
+      "description": "124123123123123",
+      "url": "",
+      "method": "POST",
+      "headers": "",
+      "body": "",
+      "resultVariable": ""
+    }
+  ]
 }
