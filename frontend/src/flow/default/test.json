@@ -20,5 +20,6 @@
     }
   ],
   "edges": [],
-  "globalVariables": []
+  "globalVariables": [],
+  "isRunning": false
 }

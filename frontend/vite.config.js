@@ -12,6 +12,13 @@ export default defineConfig({
     port: config.devServerPort,
     fs: {
       allow: ['..']
+    },
+    proxy: {
+      '/api': {
+        target: config.apiBaseUrl,
+        changeOrigin: true,
+        rewrite: (path) => path
+      }
     }
   }
 })

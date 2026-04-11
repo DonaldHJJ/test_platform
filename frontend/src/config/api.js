@@ -1,5 +1,5 @@
 export default {
-  apiBaseUrl: 'http://127.0.0.1:200',
+  apiBaseUrl: import.meta.env.DEV ? '' : 'http://127.0.0.1:200',
   publicPath: '/',
   devServerPort: 5173,
   endpoints: {
