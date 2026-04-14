@@ -6,7 +6,6 @@
         :data="treeData"
         :props="treeProps"
         node-key="id"
-        default-expand-all
         :expand-on-click-node="false"
         @node-click="handleNodeClick"
         @node-contextmenu="handleNodeContextMenu"
@@ -777,17 +776,40 @@ export default {
   border-radius: 4px;
   margin: 2px;
   position: relative;
+  overflow: hidden;
+  height: 100%;
+  min-height: 0;
 }
 
 .flow-tree {
   padding: 8px;
   overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
   min-height: 0;
+  height: 0;
 }
 
 .flow-tree :deep(.el-tree) {
   background: transparent;
+}
+
+.flow-tree::-webkit-scrollbar {
+  width: 8px;
+}
+
+.flow-tree::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.flow-tree::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.flow-tree::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
 .flow-tree :deep(.el-empty) {

@@ -35,6 +35,7 @@
           @load-global-variables="handleLoadGlobalVariables"
           @active-tab-change="handleActiveTabChange"
           @step-double-click="handleStepDoubleClick"
+          @step-delete="handleStepDelete"
         />
         
         <div class="bottom-panel-container">
@@ -1075,19 +1076,6 @@ export default {
   computed: {
     allResultVariables() {
       const variables = []
-      const groups = this.$refs?.leftPanel?.customGroups || []
-      
-      groups.forEach(group => {
-        if (group.commands) {
-          group.commands.forEach(command => {
-            if (command.resultVariable && command.resultVariable.trim()) {
-              if (!variables.includes(command.resultVariable)) {
-                variables.push(command.resultVariable)
-              }
-            }
-          })
-        }
-      })
       
       const activeTab = this.$refs?.editorPanel?.getActiveTab?.()
       if (activeTab && activeTab.steps) {
@@ -1368,6 +1356,15 @@ export default {
         console.log('handleLoadGlobalVariables - 更新后的 globalVariables:', this.globalVariables)
       } else {
         console.log('handleLoadGlobalVariables - variables 无效，不更新')
+      }
+    },
+    handleStepDelete({ resultVariable, steps }) {
+      console.log('=== handleStepDelete 被调用 ===', { resultVariable, steps })
+      
+      const index = this.globalVariables.findIndex(v => v.name === resultVariable)
+      if (index !== -1) {
+        this.globalVariables.splice(index, 1)
+        console.log('删除了全局变量:', resultVariable)
       }
     },
     handleLanguageChange(language) {
@@ -3366,6 +3363,8 @@ html, body {
 .right-panel-container {
   display: flex;
   gap: 2px;
+  min-width: 0;
+  min-height: 0;
 }
 
 .bottom-panel-container {

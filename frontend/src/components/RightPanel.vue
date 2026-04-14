@@ -70,6 +70,9 @@ export default {
   border-radius: 4px;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+  min-height: 0;
 }
 
 .right-content {
@@ -78,5 +81,7 @@ export default {
   flex-direction: column;
   gap: 2px;
   padding: 2px;
+  min-height: 0;
+  overflow: hidden;
 }
 </style>

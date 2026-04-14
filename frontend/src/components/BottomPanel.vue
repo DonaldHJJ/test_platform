@@ -131,7 +131,7 @@ export default {
       if (!message) return [{ text: '', isFile: false }]
       
       const parts = []
-      const filePattern = /(\/[^"\s]+|\\[^"\s]+|[a-zA-Z]:\\[^"\s]+)/g
+      const filePattern = /([a-zA-Z]:\\[^\s"<>|?*]+|\\\\[^\s"<>|?*]+)/g
       let lastIndex = 0
       let match
       
@@ -152,29 +152,28 @@ export default {
     async downloadFile(filePath) {
       console.log('下载文件:', filePath)
       try {
-        const response = await fetch('/api/download-file', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ filePath })
-        })
+        let downloadUrl = filePath
         
-        if (response.ok) {
-          const data = await response.json()
-          if (data.success && data.filePath) {
-            const link = document.createElement('a')
-            link.href = data.filePath
-            link.download = data.filePath.split(/[\\/]/).pop() || 'file'
-            document.body.appendChild(link)
-            link.click()
-            document.body.removeChild(link)
-          } else {
-            ElMessage.error(data.error || this.t('downloadFailed'))
-          }
+        if (filePath.startsWith('/')) {
+          downloadUrl = filePath
         } else {
-          ElMessage.error(this.t('downloadFailed'))
+          const publicIndex = filePath.toLowerCase().indexOf('public')
+          if (publicIndex !== -1) {
+            downloadUrl = filePath.substring(publicIndex + 6).replace(/\\/g, '/')
+          } else {
+            const fileName = filePath.split(/[\\/]/).pop() || 'file'
+            downloadUrl = `/result/report/${fileName}`
+          }
         }
+        
+        console.log('下载URL:', downloadUrl)
+        
+        const link = document.createElement('a')
+        link.href = downloadUrl
+        link.download = downloadUrl.split(/[\\/]/).pop() || 'file'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
       } catch (error) {
         console.error('下载文件失败:', error)
         ElMessage.error(this.t('downloadFailed'))

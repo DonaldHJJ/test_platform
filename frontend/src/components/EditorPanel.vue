@@ -110,7 +110,7 @@ export default {
       default: 'English'
     }
   },
-  emits: ['add-tab-click', 'drop-command', 'drop-custom-command', 'drop-flow', 'load-global-variables', 'active-tab-change', 'step-double-click'],
+  emits: ['add-tab-click', 'drop-command', 'drop-custom-command', 'drop-flow', 'load-global-variables', 'active-tab-change', 'step-double-click', 'step-delete'],
   data() {
     const savedTabs = localStorage.getItem('editorFlowTabs')
     const savedActiveTab = localStorage.getItem('editorActiveTabId')
@@ -494,10 +494,17 @@ export default {
       if (tab) {
         const index = tab.steps.findIndex(s => s.id === stepId)
         if (index !== -1) {
+          const deletedStep = tab.steps[index]
+          const deletedResultVariable = deletedStep.commandData?.resultVariable
+          
           tab.steps.splice(index, 1)
           tab.steps.forEach((step, i) => {
             step.stepNumber = i + 1
           })
+          
+          if (deletedResultVariable) {
+            this.$emit('step-delete', { resultVariable: deletedResultVariable, steps: tab.steps })
+          }
           
           if (tab.folderName && tab.flowName) {
             this.saveFlowToFile(tab)
