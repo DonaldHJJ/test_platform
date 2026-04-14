@@ -14,16 +14,19 @@
         <template #default="{ node, data }">
           <div 
             class="custom-tree-node" 
-            :draggable="data.type === 'file'"
-            @dblclick.stop.prevent="handleNodeDoubleClick(data)"
+            :draggable="data.type === 'file' || data.type === 'component'"
+            @dblclick.stop.prevent="data.type === 'file' ? handleNodeDoubleClick(data) : null"
             @click.stop
-            @dragstart="data.type === 'file' ? handleFlowDragStart($event, data) : null"
+            @dragstart="data.type === 'file' ? handleFlowDragStart($event, data) : (data.type === 'component' ? handleComponentDragStart($event, data) : null)"
           >
             <el-icon v-if="data.type === 'folder'" class="folder-icon">
               <Folder />
             </el-icon>
-            <el-icon v-else class="file-icon">
+            <el-icon v-else-if="data.type === 'file'" class="file-icon">
               <Document />
+            </el-icon>
+            <el-icon v-else class="component-icon">
+              <Box />
             </el-icon>
             <span class="node-label">{{ node.label }}</span>
             <el-icon 
@@ -122,7 +125,19 @@
       width="400px"
       class="folder-dialog"
     >
-      <el-input v-model="editFlowName" :placeholder="t('enterFlowName')" clearable></el-input>
+      <el-form ref="editFlowForm" :model="editFlowForm" :rules="editFlowRules" label-width="80px">
+        <el-form-item :label="t('name')" prop="flowName">
+          <el-input v-model="editFlowForm.flowName" :placeholder="t('enterFlowName')" clearable></el-input>
+        </el-form-item>
+        <el-form-item :label="t('description')" prop="description">
+          <el-input 
+            v-model="editFlowForm.description" 
+            type="textarea" 
+            :rows="3"
+            :placeholder="t('enterFlowDescription')"
+          ></el-input>
+        </el-form-item>
+      </el-form>
       <template #footer>
         <el-button @click="editFlowDialogVisible = false">{{ t('cancel') }}</el-button>
         <el-button type="primary" @click="confirmEditFlow">{{ t('confirm') }}</el-button>
@@ -132,7 +147,7 @@
 </template>
 
 <script>
-import { Folder, Plus, Delete, Document, Edit } from '@element-plus/icons-vue'
+import { Folder, Plus, Delete, Document, Edit, Box } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const messages = {
@@ -165,7 +180,14 @@ const messages = {
     folderDeleted: 'Folder deleted successfully',
     folderDeleteFailed: 'Failed to delete folder',
     pleaseEnterFlowName: 'Please enter flow name',
-    pleaseEnterFlowDescription: 'Please enter flow description'
+    pleaseEnterFlowDescription: 'Please enter flow description',
+    fileAlreadyExists: 'File already exists',
+    folderAlreadyExists: 'Folder already exists',
+    failedToEditFlow: 'Failed to edit flow',
+    failedToCreateFlow: 'Failed to create flow',
+    failedToDeleteFlow: 'Failed to delete flow',
+    failedToCreateFolder: 'Failed to create folder',
+    failedToDeleteFolder: 'Failed to delete folder'
   },
   '简体中文': {
     noContent: '暂无内容',
@@ -196,7 +218,14 @@ const messages = {
     folderDeleted: '文件夹删除成功',
     folderDeleteFailed: '删除文件夹失败',
     pleaseEnterFlowName: '请输入流程名称',
-    pleaseEnterFlowDescription: '请输入流程描述'
+    pleaseEnterFlowDescription: '请输入流程描述',
+    fileAlreadyExists: '文件已存在',
+    folderAlreadyExists: '文件夹已存在',
+    failedToEditFlow: '编辑流程失败',
+    failedToCreateFlow: '创建流程失败',
+    failedToDeleteFlow: '删除流程失败',
+    failedToCreateFolder: '创建分组失败',
+    failedToDeleteFolder: '删除文件夹失败'
   }
 }
 
@@ -207,7 +236,8 @@ export default {
     Plus,
     Delete,
     Document,
-    Edit
+    Edit,
+    Box
   },
   props: {
     language: {
@@ -237,8 +267,16 @@ export default {
         description: [{ required: true, message: '', trigger: 'blur' }]
       },
       editFlowDialogVisible: false,
-      editFlowName: '',
+      editFlowForm: {
+        flowName: '',
+        description: ''
+      },
+      editFlowRules: {
+        flowName: [{ required: true, message: '', trigger: 'blur' }],
+        description: [{ required: true, message: '', trigger: 'blur' }]
+      },
       flowFolders: [],
+      flowFilesData: {},
       treeProps: {
         children: 'children',
         label: 'label'
@@ -252,13 +290,25 @@ export default {
         label: folder.name,
         type: 'folder',
         folderName: folder.name,
-        children: (folder.files || []).map((file, fileIndex) => ({
-          id: `folder-${index}-file-${fileIndex}`,
-          label: file,
-          type: 'file',
-          folderName: folder.name,
-          fileName: file
-        }))
+        children: (folder.files || []).map((file, fileIndex) => {
+          const fileKey = `${folder.name}-${file}`
+          const flowData = this.flowFilesData[fileKey]
+          const components = flowData?.nodes?.map((node, nodeIndex) => ({
+            id: `folder-${index}-file-${fileIndex}-component-${nodeIndex}`,
+            label: node.data?.name || node.name,
+            type: 'component',
+            componentData: node
+          })) || []
+          
+          return {
+            id: `folder-${index}-file-${fileIndex}`,
+            label: file,
+            type: 'file',
+            folderName: folder.name,
+            fileName: file,
+            children: components
+          }
+        })
       }))
     }
   },
@@ -277,6 +327,24 @@ export default {
       })
       return text
     },
+    getErrorMessage(error) {
+      if (!error) return ''
+      
+      const errorLower = error.toLowerCase()
+      
+      if (errorLower.includes('file already exists') || 
+          errorLower.includes('文件已存在') || 
+          (errorLower.includes('文件') && errorLower.includes('已存在')) ||
+          (errorLower.includes('流程') && errorLower.includes('已存在'))) {
+        return this.t('fileAlreadyExists')
+      }
+      
+      if (errorLower.includes('folder already exists') || errorLower.includes('文件夹已存在') || (errorLower.includes('文件夹') && errorLower.includes('已存在'))) {
+        return this.t('folderAlreadyExists')
+      }
+      
+      return error
+    },
     handleContextMenu(event, node) {
       this.contextMenuType = node === null ? 'empty' : 'folder'
       this.rightClickNode = node
@@ -287,6 +355,11 @@ export default {
     handleNodeContextMenu(event, data, node) {
       event.preventDefault()
       event.stopPropagation()
+      
+      if (data.type === 'component') {
+        return
+      }
+      
       this.contextMenuType = data.type
       this.rightClickNode = data
       this.menuPosition.x = event.clientX
@@ -312,6 +385,21 @@ export default {
       event.dataTransfer.setData('flowName', data.label)
       event.dataTransfer.effectAllowed = 'copy'
     },
+    handleComponentDragStart(event, data) {
+      console.log('handleComponentDragStart 被调用', data)
+      const node = data.componentData
+      const componentData = {
+        id: node.id,
+        name: node.data?.name || node.name,
+        description: node.data?.description || node.description || '',
+        type: node.data?.type,
+        data: node.data
+      }
+      console.log('设置组件拖拽数据:', componentData)
+      event.dataTransfer.setData('isFromFlowSection', 'true')
+      event.dataTransfer.setData('flowComponent', JSON.stringify(componentData))
+      event.dataTransfer.effectAllowed = 'copy'
+    },
     closeContextMenu() {
       this.contextMenuVisible = false
     },
@@ -335,9 +423,34 @@ export default {
         }
       })
     },
-    handleEditFlow() {
+    async handleEditFlow() {
       if (this.rightClickNode && this.rightClickNode.type === 'file') {
-        this.editFlowName = this.rightClickNode.label
+        this.editFlowRules.flowName[0].message = this.t('pleaseEnterFlowName')
+        this.editFlowRules.description[0].message = this.t('pleaseEnterFlowDescription')
+        
+        try {
+          const response = await fetch(`/api/get-flow-file?folderName=${encodeURIComponent(this.rightClickNode.folderName)}&flowName=${encodeURIComponent(this.rightClickNode.fileName)}`)
+          const result = await response.json()
+          
+          if (result.success && result.data) {
+            this.editFlowForm.flowName = this.rightClickNode.label
+            this.editFlowForm.description = result.data.description || ''
+          } else {
+            this.editFlowForm.flowName = this.rightClickNode.label
+            this.editFlowForm.description = ''
+          }
+        } catch (error) {
+          console.error('读取流程文件失败:', error)
+          this.editFlowForm.flowName = this.rightClickNode.label
+          this.editFlowForm.description = ''
+        }
+        
+        this.$nextTick(() => {
+          if (this.$refs.editFlowForm) {
+            this.$refs.editFlowForm.clearValidate()
+          }
+        })
+        
         this.editFlowDialogVisible = true
         this.contextMenuVisible = false
       }
@@ -366,6 +479,21 @@ export default {
             })
           })
 
+          if (!response.ok) {
+            let errorMessage = this.t('failedToDeleteFlow')
+            try {
+              const errorData = await response.json()
+              errorMessage = errorData.error || errorMessage
+            } catch (e) {
+              try {
+                errorMessage = await response.text()
+              } catch (e2) {}
+            }
+            console.error('删除流程失败:', errorMessage)
+            ElMessage.error(this.getErrorMessage(errorMessage))
+            return
+          }
+
           const data = await response.json()
 
           if (data.success) {
@@ -376,7 +504,7 @@ export default {
             this.$emit('delete-flow', flowName)
           } else {
             console.error('删除流程失败:', data.error)
-            ElMessage.error(data.error)
+            ElMessage.error(this.getErrorMessage(data.error))
           }
         } catch (error) {
           if (error !== 'cancel') {
@@ -388,42 +516,66 @@ export default {
       }
     },
     async confirmEditFlow() {
-      if (this.editFlowName.trim() && this.rightClickNode && this.rightClickNode.type === 'file') {
-        try {
-          const response = await fetch('/api/rename-flow-file', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ 
-              folderName: this.rightClickNode.folderName,
-              oldFileName: this.rightClickNode.fileName,
-              newFileName: this.editFlowName
-            })
-          })
+      if (this.$refs.editFlowForm) {
+        await this.$refs.editFlowForm.validate(async (valid) => {
+          if (valid && this.rightClickNode && this.rightClickNode.type === 'file') {
+            try {
+              const response = await fetch('/api/edit-flow-file', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                  folderName: this.rightClickNode.folderName,
+                  oldFileName: this.rightClickNode.fileName,
+                  newFileName: this.editFlowForm.flowName,
+                  description: this.editFlowForm.description
+                })
+              })
 
-          const data = await response.json()
+              if (!response.ok) {
+                let errorMessage = this.t('failedToEditFlow')
+                try {
+                  const errorData = await response.json()
+                  errorMessage = errorData.error || errorMessage
+                } catch (e) {
+                  try {
+                    errorMessage = await response.text()
+                  } catch (e2) {}
+                }
+                console.error('编辑流程失败:', errorMessage)
+                ElMessage.error(this.getErrorMessage(errorMessage))
+                return
+              }
 
-          if (data.success) {
-            console.log('流程重命名成功:', data.newFilePath)
-            ElMessage.success(this.t('flowRenamed'))
-            await this.loadFlowFolders()
-            this.$emit('rename-flow', {
-              oldFolderName: this.rightClickNode.folderName,
-              oldFlowName: this.rightClickNode.fileName,
-              newFlowName: this.editFlowName
-            })
-          } else {
-            console.error('重命名流程失败:', data.error)
-            ElMessage.error(data.error)
+              const data = await response.json()
+
+              if (data.success) {
+                console.log('流程编辑成功:', data.newFilePath)
+                ElMessage.success(this.t('flowRenamed'))
+                await this.loadFlowFolders()
+                
+                if (this.rightClickNode.fileName !== this.editFlowForm.flowName) {
+                  this.$emit('rename-flow', {
+                    oldFolderName: this.rightClickNode.folderName,
+                    oldFlowName: this.rightClickNode.fileName,
+                    newFlowName: this.editFlowForm.flowName
+                  })
+                }
+              } else {
+                console.error('编辑流程失败:', data.error)
+                ElMessage.error(this.getErrorMessage(data.error))
+              }
+            } catch (error) {
+              console.error('编辑流程失败:', error)
+              ElMessage.error(this.t('flowRenameFailed') + this.t('checkServer'))
+            }
+
+            this.editFlowDialogVisible = false
+            this.editFlowForm.flowName = ''
+            this.editFlowForm.description = ''
           }
-        } catch (error) {
-          console.error('重命名流程失败:', error)
-          ElMessage.error(this.t('flowRenameFailed') + this.t('checkServer'))
-        }
-
-        this.editFlowDialogVisible = false
-        this.editFlowName = ''
+        })
       }
     },
     async confirmFlow() {
@@ -443,6 +595,21 @@ export default {
                   description: this.flowForm.description
                 })
               })
+
+              if (!response.ok) {
+                let errorMessage = this.t('failedToCreateFlow')
+                try {
+                  const errorData = await response.json()
+                  errorMessage = errorData.error || errorMessage
+                } catch (e) {
+                  try {
+                    errorMessage = await response.text()
+                  } catch (e2) {}
+                }
+                console.error('创建流程失败:', errorMessage)
+                ElMessage.error(this.getErrorMessage(errorMessage))
+                return
+              }
 
               const data = await response.json()
 
@@ -489,6 +656,21 @@ export default {
           body: JSON.stringify({ folderName: data.label })
         })
 
+        if (!response.ok) {
+          let errorMessage = this.t('failedToDeleteFolder')
+          try {
+            const errorData = await response.json()
+            errorMessage = errorData.error || errorMessage
+          } catch (e) {
+            try {
+              errorMessage = await response.text()
+            } catch (e2) {}
+          }
+          console.error('删除文件夹失败:', errorMessage)
+          ElMessage.error(this.getErrorMessage(errorMessage))
+          return
+        }
+
         const resData = await response.json()
 
         if (resData.success) {
@@ -516,6 +698,22 @@ export default {
 
         if (data.success) {
           this.flowFolders = data.folders
+          
+          this.flowFilesData = {}
+          for (const folder of data.folders) {
+            for (const file of folder.files || []) {
+              try {
+                const fileResponse = await fetch(`/api/get-flow-file?folderName=${encodeURIComponent(folder.name)}&flowName=${encodeURIComponent(file)}`)
+                const fileData = await fileResponse.json()
+                if (fileData.success && fileData.data) {
+                  const fileKey = `${folder.name}-${file}`
+                  this.flowFilesData[fileKey] = fileData.data
+                }
+              } catch (error) {
+                console.error(`读取流程文件 ${folder.name}/${file} 失败:`, error)
+              }
+            }
+          }
         }
       } catch (error) {
         console.error('获取文件夹列表失败:', error)
@@ -531,6 +729,21 @@ export default {
             },
             body: JSON.stringify({ folderName: this.folderName })
           })
+
+          if (!response.ok) {
+            let errorMessage = this.t('failedToCreateFolder')
+            try {
+              const errorData = await response.json()
+              errorMessage = errorData.error || errorMessage
+            } catch (e) {
+              try {
+                errorMessage = await response.text()
+              } catch (e2) {}
+            }
+            console.error('创建分组失败:', errorMessage)
+            ElMessage.error(this.getErrorMessage(errorMessage))
+            return
+          }
 
           const data = await response.json()
 
@@ -594,6 +807,11 @@ export default {
 .file-icon {
   font-size: 14px;
   color: #606266;
+}
+
+.component-icon {
+  font-size: 14px;
+  color: #409eff;
 }
 
 .node-label {

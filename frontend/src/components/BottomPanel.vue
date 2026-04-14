@@ -7,7 +7,16 @@
             <el-table-column prop="timestamp" :label="t('time')" width="180"></el-table-column>
             <el-table-column prop="componentId" :label="t('componentId')" width="200"></el-table-column>
             <el-table-column prop="level" :label="t('level')" width="120"></el-table-column>
-            <el-table-column prop="message" :label="t('logInfo')"></el-table-column>
+            <el-table-column prop="message" :label="t('logInfo')">
+              <template #default="{ row, $index }">
+                <div class="log-message">
+                  <span v-for="(part, i) in parseLogMessage(row.message)" :key="i">
+                    <span v-if="!part.isFile">{{ part.text }}</span>
+                    <a v-else class="log-link" @click="downloadFile(part.text)">{{ part.text }}</a>
+                  </span>
+                </div>
+              </template>
+            </el-table-column>
           </el-table>
         </div>
       </el-tab-pane>
@@ -17,6 +26,7 @@
 
 <script>
 import apiConfig from '../config/api.js'
+import { ElMessage } from 'element-plus'
 
 const messages = {
   'English': {
@@ -26,7 +36,8 @@ const messages = {
     componentId: 'Component ID',
     level: 'Level',
     logInfo: 'Log Info',
-    errorInfo: 'Error Info'
+    errorInfo: 'Error Info',
+    downloadFailed: 'Failed to download file'
   },
   '简体中文': {
     logs: '运行日志',
@@ -35,7 +46,8 @@ const messages = {
     componentId: '组件标识',
     level: '级别',
     logInfo: '日志信息',
-    errorInfo: '错误信息'
+    errorInfo: '错误信息',
+    downloadFailed: '下载文件失败'
   }
 }
 
@@ -114,6 +126,59 @@ export default {
   methods: {
     t(key) {
       return messages[this.language]?.[key] || messages['English'][key]
+    },
+    parseLogMessage(message) {
+      if (!message) return [{ text: '', isFile: false }]
+      
+      const parts = []
+      const filePattern = /(\/[^"\s]+|\\[^"\s]+|[a-zA-Z]:\\[^"\s]+)/g
+      let lastIndex = 0
+      let match
+      
+      while ((match = filePattern.exec(message)) !== null) {
+        if (match.index > lastIndex) {
+          parts.push({ text: message.substring(lastIndex, match.index), isFile: false })
+        }
+        parts.push({ text: match[0], isFile: true })
+        lastIndex = match.index + match[0].length
+      }
+      
+      if (lastIndex < message.length) {
+        parts.push({ text: message.substring(lastIndex), isFile: false })
+      }
+      
+      return parts
+    },
+    async downloadFile(filePath) {
+      console.log('下载文件:', filePath)
+      try {
+        const response = await fetch('/api/download-file', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ filePath })
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success && data.filePath) {
+            const link = document.createElement('a')
+            link.href = data.filePath
+            link.download = data.filePath.split(/[\\/]/).pop() || 'file'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+          } else {
+            ElMessage.error(data.error || this.t('downloadFailed'))
+          }
+        } else {
+          ElMessage.error(this.t('downloadFailed'))
+        }
+      } catch (error) {
+        console.error('下载文件失败:', error)
+        ElMessage.error(this.t('downloadFailed'))
+      }
     },
     generateHash(data) {
       const str = JSON.stringify(data)
@@ -361,5 +426,20 @@ export default {
 
 .bottom-tab-content :deep(.el-table .el-table__row) {
   height: 30px !important;
+}
+
+.log-message {
+  display: inline;
+  word-break: break-all;
+}
+
+.log-link {
+  color: #409eff;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.log-link:hover {
+  color: #66b1ff;
 }
 </style>

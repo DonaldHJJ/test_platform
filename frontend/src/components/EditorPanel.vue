@@ -386,6 +386,33 @@ export default {
       
       console.log('dataTransfer types:', event.dataTransfer.types)
       
+      const isFromFlowSection = event.dataTransfer.getData('isFromFlowSection')
+      console.log('isFromFlowSection value:', isFromFlowSection, 'type:', typeof isFromFlowSection)
+      
+      if (isFromFlowSection === 'true') {
+        const flowComponent = event.dataTransfer.getData('flowComponent')
+        console.log('flowComponent value:', flowComponent)
+        
+        if (flowComponent) {
+          try {
+            const component = JSON.parse(flowComponent)
+            console.log('解析后的组件:', component)
+            
+            const stepData = {
+              name: component.name,
+              description: component.description
+            }
+            const commandData = component.data
+            
+            console.log('添加步骤:', { stepData, commandData })
+            this.addStep(stepData, commandData)
+          } catch (e) {
+            console.error('解析流程组件失败:', e)
+          }
+        }
+        return
+      }
+      
       const isFlow = event.dataTransfer.getData('isFlow')
       console.log('isFlow value:', isFlow, 'type:', typeof isFlow)
       
