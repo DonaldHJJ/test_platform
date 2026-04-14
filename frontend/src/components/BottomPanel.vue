@@ -154,12 +154,13 @@ export default {
       try {
         let downloadUrl = filePath
         
-        if (filePath.startsWith('/')) {
-          downloadUrl = filePath
+        const publicIndex = filePath.toLowerCase().indexOf('public')
+        if (publicIndex !== -1) {
+          downloadUrl = filePath.substring(publicIndex + 6).replace(/\\/g, '/')
         } else {
-          const publicIndex = filePath.toLowerCase().indexOf('public')
-          if (publicIndex !== -1) {
-            downloadUrl = filePath.substring(publicIndex + 6).replace(/\\/g, '/')
+          const resultIndex = filePath.toLowerCase().indexOf('/result/')
+          if (resultIndex !== -1) {
+            downloadUrl = filePath.substring(resultIndex)
           } else {
             const fileName = filePath.split(/[\\/]/).pop() || 'file'
             downloadUrl = `/result/report/${fileName}`
