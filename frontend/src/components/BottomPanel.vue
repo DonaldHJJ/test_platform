@@ -131,7 +131,7 @@ export default {
       if (!message) return [{ text: '', isFile: false }]
       
       const parts = []
-      const filePattern = /([a-zA-Z]:\\[^\s"<>|?*]+|\\\\[^\s"<>|?*]+)/g
+      const filePattern = /([a-zA-Z]:\\[^\s"<>|?*]+|\\\\[^\s"<>|?*]+|\/[^\s"<>|?*]+)/g
       let lastIndex = 0
       let match
       
@@ -164,6 +164,10 @@ export default {
             const fileName = filePath.split(/[\\/]/).pop() || 'file'
             downloadUrl = `/result/report/${fileName}`
           }
+        }
+        
+        if (!downloadUrl.startsWith('/')) {
+          downloadUrl = '/' + downloadUrl
         }
         
         console.log('下载URL:', downloadUrl)
