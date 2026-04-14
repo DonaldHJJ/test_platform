@@ -369,11 +369,6 @@
               <el-button type="primary" size="small" @click="addReplaceItem">{{ t('add') }}</el-button>
             </div>
             <el-table :data="otherCommandForm.replaceList" border size="small">
-              <el-table-column :label="t('field')" prop="field" align="center">
-                <template #default="{ row, $index }">
-                  <el-input v-model="row.field" :placeholder="t('field')" size="small"></el-input>
-                </template>
-              </el-table-column>
               <el-table-column :label="t('startText')" prop="start" align="center">
                 <template #default="{ row, $index }">
                   <el-input v-model="row.start" :placeholder="t('startText')" size="small"></el-input>
@@ -2547,7 +2542,6 @@ export default {
     },
     addReplaceItem() {
       this.otherCommandForm.replaceList.push({
-        field: '',
         start: '',
         end: '',
         value: ''
