@@ -37,7 +37,10 @@ const messages = {
     level: 'Level',
     logInfo: 'Log Info',
     errorInfo: 'Error Info',
-    downloadFailed: 'Failed to download file'
+    downloadFailed: 'Failed to download file',
+    fileNotFound: 'File not found, please check if the file exists',
+    emptyFile: 'File content is empty',
+    httpError: 'HTTP error'
   },
   '简体中文': {
     logs: '运行日志',
@@ -47,7 +50,10 @@ const messages = {
     level: '级别',
     logInfo: '日志信息',
     errorInfo: '错误信息',
-    downloadFailed: '下载文件失败'
+    downloadFailed: '下载文件失败',
+    fileNotFound: '文件不存在，请检查文件是否存在',
+    emptyFile: '文件内容为空',
+    httpError: 'HTTP错误'
   }
 }
 
@@ -131,7 +137,7 @@ export default {
       if (!message) return [{ text: '', isFile: false }]
       
       const parts = []
-      const filePattern = /([a-zA-Z]:\\[^\s"<>|?*]+|\\\\[^\s"<>|?*]+|\/[^\s"<>|?*]+)/g
+      const filePattern = /<a>([^<]+)<\/a>/g
       let lastIndex = 0
       let match
       
@@ -139,7 +145,7 @@ export default {
         if (match.index > lastIndex) {
           parts.push({ text: message.substring(lastIndex, match.index), isFile: false })
         }
-        parts.push({ text: match[0], isFile: true })
+        parts.push({ text: match[1], isFile: true })
         lastIndex = match.index + match[0].length
       }
       
@@ -157,31 +163,54 @@ export default {
         const publicIndex = filePath.toLowerCase().indexOf('public')
         if (publicIndex !== -1) {
           downloadUrl = filePath.substring(publicIndex + 6).replace(/\\/g, '/')
-        } else {
-          const resultIndex = filePath.toLowerCase().indexOf('/result/')
-          if (resultIndex !== -1) {
-            downloadUrl = filePath.substring(resultIndex)
-          } else {
-            const fileName = filePath.split(/[\\/]/).pop() || 'file'
-            downloadUrl = `/result/report/${fileName}`
-          }
         }
         
         if (!downloadUrl.startsWith('/')) {
           downloadUrl = '/' + downloadUrl
         }
         
+        // 添加时间戳避免缓存
+        const timestamp = new Date().getTime()
+        downloadUrl = `${downloadUrl}?t=${timestamp}`
+        
         console.log('下载URL:', downloadUrl)
         
-        const link = document.createElement('a')
-        link.href = downloadUrl
-        link.download = downloadUrl.split(/[\\/]/).pop() || 'file'
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
+        const response = await fetch(downloadUrl)
+        console.log('响应状态:', response.status, response.statusText)
+        console.log('响应类型:', response.type)
+        console.log('响应头:', response.headers)
+        console.log('Content-Type:', response.headers.get('content-type'))
+        console.log('Content-Length:', response.headers.get('content-length'))
+        
+        if (!response.ok) {
+          throw new Error(`${this.t('httpError')}: ${response.status}`)
+        }
+        
+        const blob = await response.blob()
+        console.log('Blob大小:', blob.size, '类型:', blob.type)
+        
+        if (blob.size === 0) {
+          throw new Error(this.t('emptyFile'))
+        }
+        
+        // 先预览一下内容，看看返回了什么
+        if (blob.type === 'text/html') {
+          const text = await blob.text()
+          console.log('返回的HTML内容:', text)
+          throw new Error(this.t('fileNotFound'))
+        }
+        
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = downloadUrl.split(/[\\/]/).pop().split('?')[0] || 'file'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        window.URL.revokeObjectURL(url)
       } catch (error) {
         console.error('下载文件失败:', error)
-        ElMessage.error(this.t('downloadFailed'))
+        ElMessage.error(this.t('downloadFailed') + ': ' + error.message)
       }
     },
     generateHash(data) {

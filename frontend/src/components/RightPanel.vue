@@ -9,6 +9,7 @@
         @delete-flow="$emit('delete-flow', $event)"
         @open-flow="$emit('open-flow', $event)"
         @rename-flow="$emit('rename-flow', $event)"
+        @delete-folder="$emit('delete-folder', $event)"
         :language="language"
       />
 
@@ -52,7 +53,7 @@ export default {
       default: 'English'
     }
   },
-  emits: ['add-variable', 'edit-variable', 'create-flow', 'delete-flow', 'open-flow', 'rename-flow'],
+  emits: ['add-variable', 'edit-variable', 'create-flow', 'delete-flow', 'open-flow', 'rename-flow', 'delete-folder'],
   methods: {
     refreshFlowFolders() {
       if (this.$refs.flowSection && this.$refs.flowSection.loadFlowFolders) {

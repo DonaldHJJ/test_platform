@@ -6,6 +6,7 @@
         :data="treeData"
         :props="treeProps"
         node-key="id"
+        :default-expanded-keys="defaultExpandedKeys"
         :expand-on-click-node="false"
         @node-click="handleNodeClick"
         @node-contextmenu="handleNodeContextMenu"
@@ -244,7 +245,7 @@ export default {
       default: 'English'
     }
   },
-  emits: ['create-flow', 'delete-flow', 'open-flow', 'rename-flow'],
+  emits: ['create-flow', 'delete-flow', 'open-flow', 'rename-flow', 'delete-folder'],
   data() {
     return {
       contextMenuVisible: false,
@@ -266,6 +267,7 @@ export default {
         description: [{ required: true, message: '', trigger: 'blur' }]
       },
       editFlowDialogVisible: false,
+      editFlowOriginalName: '',
       editFlowForm: {
         flowName: '',
         description: ''
@@ -309,6 +311,10 @@ export default {
           }
         })
       }))
+    },
+    defaultExpandedKeys() {
+      // 让所有文件夹默认展开，流程默认折叠
+      return this.flowFolders.map((folder, index) => `folder-${index}`)
     }
   },
   created() {
@@ -427,6 +433,8 @@ export default {
         this.editFlowRules.flowName[0].message = this.t('pleaseEnterFlowName')
         this.editFlowRules.description[0].message = this.t('pleaseEnterFlowDescription')
         
+        this.editFlowOriginalName = this.rightClickNode.fileName
+        
         try {
           const response = await fetch(`/api/get-flow-file?folderName=${encodeURIComponent(this.rightClickNode.folderName)}&flowName=${encodeURIComponent(this.rightClickNode.fileName)}`)
           const result = await response.json()
@@ -519,51 +527,105 @@ export default {
         await this.$refs.editFlowForm.validate(async (valid) => {
           if (valid && this.rightClickNode && this.rightClickNode.type === 'file') {
             try {
-              const response = await fetch('/api/edit-flow-file', {
-                method: 'POST',
+              const isNameChanged = this.editFlowOriginalName !== this.editFlowForm.flowName
+              
+              if (isNameChanged) {
+                // 名称改变了，调用重命名接口
+                const renameResponse = await fetch('/api/rename-flow-file', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({ 
+                    folderName: this.rightClickNode.folderName,
+                    oldFileName: this.editFlowOriginalName,
+                    newFileName: this.editFlowForm.flowName
+                  })
+                })
+
+                if (!renameResponse.ok) {
+                  let errorMessage = this.t('failedToEditFlow')
+                  try {
+                    const errorData = await renameResponse.json()
+                    errorMessage = errorData.error || errorMessage
+                  } catch (e) {
+                    try {
+                      errorMessage = await renameResponse.text()
+                    } catch (e2) {}
+                  }
+                  console.error('重命名流程失败:', errorMessage)
+                  ElMessage.error(this.getErrorMessage(errorMessage))
+                  return
+                }
+
+                const renameData = await renameResponse.json()
+
+                if (!renameData.success) {
+                  console.error('重命名流程失败:', renameData.error)
+                  ElMessage.error(this.getErrorMessage(renameData.error))
+                  return
+                }
+              }
+
+              // 无论名称是否改变，都更新描述
+              // 先获取当前流程数据
+              const getResponse = await fetch(`/api/get-flow-file?folderName=${encodeURIComponent(this.rightClickNode.folderName)}&flowName=${encodeURIComponent(isNameChanged ? this.editFlowForm.flowName : this.editFlowOriginalName)}`)
+              const getResult = await getResponse.json()
+
+              if (!getResult.success) {
+                console.error('获取流程数据失败:', getResult.error)
+                ElMessage.error(this.getErrorMessage(getResult.error))
+                return
+              }
+
+              const flowData = getResult.data
+              flowData.description = this.editFlowForm.description
+              flowData.name = this.editFlowForm.flowName
+
+              const updateResponse = await fetch('/api/update-flow-file', {
+                method: 'PUT',
                 headers: {
                   'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ 
                   folderName: this.rightClickNode.folderName,
-                  oldFileName: this.rightClickNode.fileName,
-                  newFileName: this.editFlowForm.flowName,
-                  description: this.editFlowForm.description
+                  flowName: isNameChanged ? this.editFlowForm.flowName : this.editFlowOriginalName,
+                  data: flowData
                 })
               })
 
-              if (!response.ok) {
+              if (!updateResponse.ok) {
                 let errorMessage = this.t('failedToEditFlow')
                 try {
-                  const errorData = await response.json()
+                  const errorData = await updateResponse.json()
                   errorMessage = errorData.error || errorMessage
                 } catch (e) {
                   try {
-                    errorMessage = await response.text()
+                    errorMessage = await updateResponse.text()
                   } catch (e2) {}
                 }
-                console.error('编辑流程失败:', errorMessage)
+                console.error('更新流程失败:', errorMessage)
                 ElMessage.error(this.getErrorMessage(errorMessage))
                 return
               }
 
-              const data = await response.json()
+              const updateData = await updateResponse.json()
 
-              if (data.success) {
-                console.log('流程编辑成功:', data.newFilePath)
+              if (updateData.success) {
+                console.log('流程编辑成功:', updateData.filePath)
                 ElMessage.success(this.t('flowRenamed'))
                 await this.loadFlowFolders()
                 
-                if (this.rightClickNode.fileName !== this.editFlowForm.flowName) {
+                if (isNameChanged) {
                   this.$emit('rename-flow', {
                     oldFolderName: this.rightClickNode.folderName,
-                    oldFlowName: this.rightClickNode.fileName,
+                    oldFlowName: this.editFlowOriginalName,
                     newFlowName: this.editFlowForm.flowName
                   })
                 }
               } else {
-                console.error('编辑流程失败:', data.error)
-                ElMessage.error(this.getErrorMessage(data.error))
+                console.error('编辑流程失败:', updateData.error)
+                ElMessage.error(this.getErrorMessage(updateData.error))
               }
             } catch (error) {
               console.error('编辑流程失败:', error)
@@ -573,6 +635,7 @@ export default {
             this.editFlowDialogVisible = false
             this.editFlowForm.flowName = ''
             this.editFlowForm.description = ''
+            this.editFlowOriginalName = ''
           }
         })
       }
@@ -646,6 +709,9 @@ export default {
             type: 'warning'
           }
         )
+
+        // 先通知父组件关闭相关的标签页
+        this.$emit('delete-folder', data.label)
 
         const response = await fetch('/api/delete-flow-folder', {
           method: 'DELETE',

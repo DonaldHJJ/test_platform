@@ -4,9 +4,14 @@
       <el-tab-pane 
         v-for="tab in flowTabs" 
         :key="tab.id" 
-        :label="tab.name" 
         :name="tab.id.toString()"
       >
+        <template #label>
+          <span class="tab-label">
+            <span v-if="tab.isRunning" class="running-indicator">●</span>
+            {{ tab.name }}
+          </span>
+        </template>
         <div class="flow-tab-content">
           <div 
             class="flow-canvas"
@@ -324,6 +329,17 @@ export default {
         return
       }
       
+      // 首先更新前端标签页的运行状态
+      this.flowTabs = this.flowTabs.map(tab => {
+        if (tab.folderName === folderName && tab.flowName === flowName) {
+          return {
+            ...tab,
+            isRunning: isRunning
+          }
+        }
+        return tab
+      })
+      
       try {
         const getResponse = await fetch(`/api/get-flow-file?folderName=${encodeURIComponent(folderName)}&flowName=${encodeURIComponent(flowName)}`)
         const getResult = await getResponse.json()
@@ -574,7 +590,8 @@ export default {
             folderName: folderName,
             flowName: flowName,
             description: result.data.description || '',
-            hasJsonFile: true
+            hasJsonFile: true,
+            isRunning: result.data.isRunning === true
           }
           
           console.log('创建新标签页:', newTab)
@@ -683,6 +700,53 @@ export default {
         return tab
       })
     },
+    closeFlowTabsByFolder(folderName) {
+      console.log('closeFlowTabsByFolder 被调用', { folderName })
+      
+      // 找出所有属于该文件夹的标签页
+      const tabsToClose = this.flowTabs.filter(tab => tab.folderName === folderName)
+      
+      if (tabsToClose.length === 0) {
+        console.log('没有需要关闭的标签页')
+        return
+      }
+      
+      console.log('需要关闭的标签页:', tabsToClose.map(t => ({ id: t.id, name: t.name })))
+      
+      // 检查是否所有标签页都要被关闭
+      const allTabsWillClose = tabsToClose.length === this.flowTabs.length
+      
+      if (allTabsWillClose) {
+        // 先添加一个新的未保存标签页
+        const newId = Date.now()
+        const newTab = {
+          id: newId,
+          name: this.t('unsaved'),
+          steps: [],
+          folderName: null,
+          flowName: null,
+          description: '',
+          hasJsonFile: false
+        }
+        this.flowTabs.push(newTab)
+        this.activeFlowTabId = newId.toString()
+        console.log('添加新标签页:', newTab)
+      } else {
+        // 检查当前激活的标签页是否会被关闭
+        const activeTabWillClose = tabsToClose.some(tab => tab.id.toString() === this.activeFlowTabId)
+        if (activeTabWillClose) {
+          // 找到第一个不会被关闭的标签页作为新的激活标签页
+          const newActiveTab = this.flowTabs.find(tab => tab.folderName !== folderName)
+          if (newActiveTab) {
+            this.activeFlowTabId = newActiveTab.id.toString()
+          }
+        }
+      }
+      
+      // 关闭相关标签页
+      this.flowTabs = this.flowTabs.filter(tab => tab.folderName !== folderName)
+      console.log('关闭后的标签页:', this.flowTabs.map(t => ({ id: t.id, name: t.name })))
+    },
     handleStepDragStart(tabId, index) {
       this.draggedTabId = tabId
       this.draggedIndex = index
@@ -758,6 +822,27 @@ export default {
   border-radius: 4px;
   position: relative;
   min-height: 0;
+}
+
+.tab-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.running-indicator {
+  color: #67c23a;
+  font-size: 10px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 .flow-tabs {

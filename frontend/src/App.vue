@@ -60,6 +60,7 @@
           @delete-flow="handleDeleteFlow"
           @open-flow="handleOpenFlow"
           @rename-flow="handleRenameFlow"
+          @delete-folder="handleDeleteFolder"
         />
       </div>
     </div>
@@ -270,7 +271,7 @@
             <el-option :label="t('getValue')" value="get-value"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item v-if="['click', 'double-click', 'right-click', 'input', 'get-value', 'open-link'].includes(webCommandForm.action)" :label="t('name')" prop="element">
+        <el-form-item v-if="['click', 'double-click', 'right-click', 'input', 'get-value'].includes(webCommandForm.action)" :label="t('name')" prop="element">
           <el-input v-model="webCommandForm.element" :placeholder="t('pleaseEnterElementSelector')"></el-input>
         </el-form-item>
         <el-form-item v-if="['input', 'open-link'].includes(webCommandForm.action)" :label="t('value')" prop="inputValue">
@@ -1144,7 +1145,7 @@ export default {
         rules.action = [{ required: true, message: this.t('pleaseEnterAction'), trigger: 'change' }]
       }
       
-      if (['click', 'double-click', 'right-click', 'input', 'get-value', 'open-link'].includes(this.webCommandForm.action) && isRequired) {
+      if (['click', 'double-click', 'right-click', 'input', 'get-value'].includes(this.webCommandForm.action) && isRequired) {
         rules.element = [{ required: true, message: this.t('pleaseEnterElement'), trigger: 'blur' }]
       }
       
@@ -1322,6 +1323,10 @@ export default {
         console.log('已有JSON文件，直接保存')
         await this.$refs.editorPanel.saveFlowToFile(activeTab)
         ElMessage.success(this.t('saveSuccess'))
+        // 保存成功后，刷新流程区显示
+        if (this.$refs.rightPanel && this.$refs.rightPanel.refreshFlowFolders) {
+          this.$refs.rightPanel.refreshFlowFolders()
+        }
       } else {
         console.log('没有JSON文件，弹出对话框')
         await this.loadFlowFolders()
@@ -1710,6 +1715,12 @@ export default {
         this.$refs.editorPanel.closeFlowTabByName(flowName)
       }
     },
+    handleDeleteFolder(folderName) {
+      console.log('handleDeleteFolder 被调用', { folderName })
+      if (this.$refs.editorPanel) {
+        this.$refs.editorPanel.closeFlowTabsByFolder(folderName)
+      }
+    },
     handleRenameFlow({ oldFolderName, oldFlowName, newFlowName }) {
       console.log('handleRenameFlow 被调用', { oldFolderName, oldFlowName, newFlowName })
       if (this.$refs.editorPanel) {
@@ -1737,20 +1748,29 @@ export default {
         return
       }
       
+      // 保存当前流程的信息，避免切换标签页后丢失
+      const currentFolderName = activeTab.folderName
+      const currentFlowName = activeTab.flowName
+      
+      if (!currentFolderName || !currentFlowName) {
+        ElMessage.warning(this.t('pleaseSaveFirst'))
+        return
+      }
+      
       let didSetRunning = false
       
       try {
-        const isRunning = await this.$refs.editorPanel.checkFlowRunningStatus(activeTab.folderName, activeTab.flowName)
+        const isRunning = await this.$refs.editorPanel.checkFlowRunningStatus(currentFolderName, currentFlowName)
         if (isRunning) {
           ElMessage.warning(this.t('flowIsRunning'))
           return
         }
         
-        await this.$refs.editorPanel.updateFlowRunningStatus(activeTab.folderName, activeTab.flowName, true)
+        await this.$refs.editorPanel.updateFlowRunningStatus(currentFolderName, currentFlowName, true)
         didSetRunning = true
         
         const flowData = {
-          name: activeTab.flowName || activeTab.name,
+          name: currentFlowName || activeTab.name,
           description: activeTab.description || '',
           nodes: activeTab.steps.map((step, index) => ({
             id: step.id,
@@ -1783,8 +1803,8 @@ export default {
         console.error('运行流程失败:', error)
         ElMessage.error(this.t('runFailed') + ', ' + this.t('pleaseCheckServer'))
       } finally {
-        if (didSetRunning && activeTab?.folderName && activeTab?.flowName) {
-          await this.$refs.editorPanel.updateFlowRunningStatus(activeTab.folderName, activeTab.flowName, false)
+        if (didSetRunning && currentFolderName && currentFlowName) {
+          await this.$refs.editorPanel.updateFlowRunningStatus(currentFolderName, currentFlowName, false)
         }
       }
     },
